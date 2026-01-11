@@ -1,0 +1,27 @@
+# Vivado Project Files (recreatable)
+*.xpr
+*.runs/
+*.cache/
+*.hw/
+*.ip_user_files/
+*.sim/
+*.hbs
+*.jou
+*.log
+*.str
+.Xil/
+
+# Generated Files
+*.bit
+*.bin
+*.ltx
+*.dcp
+*.rpt
+
+# Backup Files
+*~
+*.bak
+
+# OS Files
+.DS_Store
+Thumbs.db
