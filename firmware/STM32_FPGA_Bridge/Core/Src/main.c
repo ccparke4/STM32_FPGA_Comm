@@ -350,7 +350,7 @@ void StartDefaultTask(void *argument)
 	  // toggle random LED maybe
 
 	  // update every 1s
-	  osDelay(10);
+	  osDelay(1000);
   }
   /* USER CODE END 5 */
 }
@@ -393,7 +393,7 @@ void StartSpiTask(void *argument) {
 			HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
         	printf("SPI Error\n");
 		}
-		osDelay(1);
+		osDelay(100);
 
 	}
 
