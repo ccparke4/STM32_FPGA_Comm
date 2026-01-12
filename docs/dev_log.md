@@ -91,6 +91,141 @@ To verify data ingress physically, the FPGA parses the received byte and maps it
 ### 2. Visual Observation
 * The 7-segment display on the Basys 3 increments in perfect sync with the STM32 debug logs, confirming the FPGA is correctly latching the MOSI line.
 
-# Next Steps
-* Implement a Command Parser (e.g,. sending specific opcodes to toggle FPGA LEDs)
-* Stress test the link by increasing SPI baud rate.
+## Entry 3: SPI Stress Test & Pipeline Bug Fix
+__Date:__ 01/12/2026
+
+### __Objectives__
+* Implement high-speed stress test for SPI link
+* Verify data integrity at max throughput
+* Identify and fix any timing or protocol issues
+
+### __Test Design__
+Modified `StartSpiTask` to perform single-byte transactions at max rate:
+* __Method:__ Send incrementing counter (0-255), verify echo = prev. byte
+* __Rate:__ ~50k Tx/s 
+* __Verification:__ `rx_byte` should be equal to `tx_byte - 1` due to pipeline latency
+```c
+// stress test verif. logic
+expected_val = tx_byte - 1;     // FPGA echoes prev. byte
+if (rx_byte != expected_val) {
+    error_count++;
+}
+```
+
+
+### __Failure Observed___
+* __Symptom:__ 100% error rate. MISO always returned 0x00.
+* __Console Output:__
+```
+Starting SPI Stress Test...
+FAIL: Tx: 01, Rx: 00
+FAIL: Tx: 02, Rx: 00
+...
+Transfers: 5000 | Errors: 4999 | Last Rx: 0x00
+```
+
+* __Logic Analyzer:__ Confirmed MOSI=0x19, MISO=0x00 
+
+### __Root Cause Analysis__
+The original SPI slave reset `byte_to_send` to 0x00 whenever CS went inactive:
+```systemverilog
+// BUG: State cleared between each Tx
+if (!cs_active) begin
+    bit_cnt         <= '0;
+    byte_to_send    <= 8'h00;   // ISSUE: loses prev. byte
+end
+```
+
+With 1'B transactions (CS toggles between each byte), the FPGA never retains the Rx'd data to echo.
+
+__Protocol Mismatch__
+| Test Type | CS Behavior | FPGA State |
+|-----------|-------------|------------|
+| 4'B packet | CS held low | State preserved |
+| 1'B stress | CS toggles each byte | State reset |
+
+### __Solution__
+Added persistent `last_byte` reg. that survives CS transitions:
+```systemverilog
+logic [7:0] last_byte;  // persists
+
+always_ff @(posedge clk) begin
+    if (cs_falling) begin
+        // CS just went active - load previous byte to send
+        shift_out <= last_byte;
+        bit_cnt   <= 3'd0;
+    end else if (!cs_active) begin
+        // CS inactive - only reset bit counter, NOT data
+        bit_cnt <= 3'd0;
+    end else begin
+        // Normal SPI operation...
+        if (bit_cnt == 3'd7) begin
+            last_byte <= {shift_in[6:0], mosi_sync[1]};  // Save for next transaction
+        end
+    end
+end
+```
+
+__Key Changes:__
+| Component | Before | After |
+|-----------|--------|-------|
+| Data persistance | Cleared on CS high | `last_byte` survives |
+| MISO preload | On SCLK falling (late) | On CS falling (early) |
+| CS sync depth | 2-stage (`cs_sync[1]`) | 3-stage (`cs_sync[2]`) |
+
+### __Verification (Pending)__
+- [x] Rebuild bitstream w/ fixes
+- [x] Re-run stress test
+- [x] verify 0% error rate at 50k tx's
+- [x] Capture logic analyzer showing correct echo (see phase1_verification.md)
+
+## Entry 4: Stress Test Verification - PASS
+__Date:__ 01/12/2026
+
+### __Test Config__
+| Parameter | Value |
+|-----------|-------|
+| SPI clock | 3.9MHz|
+| Tx Size | 1'B |
+| CS Toggle | Every Byte |
+| Verification | Echo previous byte |
+
+### __Results__
+
+#### Console Output (SWV ITM)
+```
+Transfers: 6655000 | Errors: 0 | Last Rx: 0x16
+Transfers: 6660000 | Errors: 0 | Last Rx: 0x9E
+System Alive: 56 seconds | FPGA Link Active
+...
+Transfers: 6705000 | Errors: 0 | Last Rx: 0x66
+Transfers: 6710000 | Errors: 0 | Last Rx: 0xEE
+Transfers: 6715000 | Errors: 0 | Last Rx: 0x76
+```
+
+#### Logic Analyzer Capture
+Verified correct pipeline behavior:
+![SPI Stress Test - Logic Analyzer](screenshots/stress_spi_LA_00.png)
+
+### __Performance Metrics__
+| Metric | Value |
+|--------|-------|
+| Total Transfers | 6,715,000+ |
+| Error Count | 0 |
+| Error Rate | 0.000% |
+| Throughput | ~120,000 bytes/sec |
+| Test Duration | 56+ seconds |
+
+### __Verification Checklist__
+- [x] MISO echoes previous MOSI byte
+- [x] Zero errors over millions of transfers
+- [x] 7-segment display updates correctly
+- [x] Logic analyzer confirms timing
+
+## Next Steps
+### DMA Integration 
+Offload SPI transfers from CPU to DMA controller for higher throughput and lower CPU utilization.
+* __Goal:__ Achieve continuous streaming without CPU intervention.
+* __Benefit:__ Free CPU cycles for processing
+* __Implementation:__ Config STM32 SPI4 with DMA TX/RX circular buffers.
+
