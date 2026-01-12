@@ -9,63 +9,63 @@ module spi_slave(
     
     // --- Syncronization ----
     logic [2:0] sclk_sync, cs_sync;
-    logic       mosi_sync;
+    logic [1:0] mosi_sync;
     
     always_ff @(posedge clk) begin 
         sclk_sync <= {sclk_sync[1:0], sclk};
         cs_sync   <= {cs_sync[1:0], cs};
-        mosi_sync <= mosi;
+        mosi_sync <= {mosi_sync[0], mosi};
     end
     
     // Edge detection
-    logic sclk_rising, sclk_falling, cs_active;
-    assign sclk_rising  = (sclk_sync[2:1] == 2'b01);
-    assign sclk_falling = (sclk_sync[2:1] == 2'b10);
-    assign cs_active    = ~cs_sync[1]; // active low
+    wire sclk_rising    = (sclk_sync[2:1] == 2'b01);
+    wire sclk_falling   = (sclk_sync[2:1] == 2'b10);
+    wire cs_active      = ~cs_sync[2];                  // fully sync'd signal
+    wire cs_falling     = (cs_sync[2:1] == 2'b10);      // CS just went active
     
     // --- SPI Logic ---
-    logic [7:0] shift_reg;
+    logic [7:0] shift_in;           // Rx shift reg
+    logic [7:0] shift_out;          // Tx shift reg
+    logic [7:0] last_byte;          // persist - 0x00 state issues last version       
     logic [2:0] bit_cnt;
-    logic [7:0] byte_to_send;
-    logic [1:0] byte_index;
+    
+    // Init. last_byte to 0 on powerup
+    initial begin
+        last_byte = 8'h00;
+    end
     
     always_ff @(posedge clk) begin
-        if (!cs_active) begin
-            bit_cnt      <= '0;
-            byte_index   <= '0;
-            miso         <= 1'b0;
-            byte_to_send <= 8'h00;
+        if (cs_falling) begin
+            // CS just went active - ld prev. byte to Tx
+            shift_out <= last_byte;
+            bit_cnt   <= 3'd0;
+        end else if (!cs_active) begin
+            // CS inactive - just reset bit counter
+            bit_cnt  <= 3'd0;
         end else begin
-            // 1. Sample MOSI (Input) on Rising Edge
+            // CS active - process SPI
+            
+            // Sample on MOSI rising edge
             if (sclk_rising) begin
-                shift_reg <= {shift_reg[6:0], mosi_sync};
-                bit_cnt   <= bit_cnt + 1;
+                shift_in <= {shift_in[6:0], mosi_sync[1]};
+                bit_cnt  <= bit_cnt + 1;
                 
-                // --- END OF BYTE DET. ---
-                if (bit_cnt == 7) begin
-                    // If its the first byte, save to the display register
-                    if (byte_index == 0) data_received <= {shift_reg[6:0], mosi_sync};
-                    byte_index <= byte_index + 1;
-                    
-                    // --- PRELOAD the NEXT BYTE ---
-                    // look at (byte_index + 1) as we prepare for upcoming transaction
-                    case (byte_index + 1)
-                        1: byte_to_send <= {shift_reg[6:0], mosi_sync};     // loopback echo
-                        2: byte_to_send <= 8'h48;                           // 'H'
-                        3: byte_to_send <= 8'h69;                           // 'i'
-                        default: byte_to_send <= 8'h00;
-                    endcase 
-                end
+                // Byte Complete?
+                if (bit_cnt == 3'd7) begin
+                    // save for next Tx and display
+                    last_byte       <= {shift_in[6:0], mosi_sync[1]};
+                    data_received   <= {shift_in[6:0], mosi_sync[1]};
+                end               
             end
             
-            // 2. Drivre MISO (Output) on falling edge
+            // Shift out MISO on falling edge
             if (sclk_falling) begin
-                // as bit_cnt wraps to 0 after 7
-                // bit_cnt already 0 here for first bit of the new byte
-                // shift out the bit
-                if (bit_cnt == 0) miso <= byte_to_send[7];
-                else              miso <= byte_to_send[7 - bit_cnt];
+                shift_out <= {shift_out[6:0], 1'b0};
             end
         end
     end
+    
+    // MISO output - directly from shift reg. MSB
+    // drive when CS active, high-Z when inactive
+    assign miso = cs_active ? shift_out[7] : 1'bz;
 endmodule
