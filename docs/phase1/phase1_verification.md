@@ -16,7 +16,7 @@ Metrics re-calculated based on the confirmed MCU SPI Baud Rate of 3.906MHz and l
 Metric | Measured / Calculated | Description
 --- | --- | --- 
 Oversampling Ratio | 25.6x | 100MHz(Sys)/3.9MHz(SPI), ratio of 25x is robust
-Bit Period | 256ns | 256ns | FPGA samples this 25 times / bit
+Bit Period | 256ns | FPGA samples this 25 times / bit
 Transaction Delta | 1.92us | Measured time between bytes
 Effective Bitrate | ~4.1Mbps | Derived from the transaction delta (1 / 1.92us * 8). Matches MCUs 3.9MHz within clock tolerance.
 Throughput | ~520kB/s | Linke is operating at the physical limit of the 3.9MHz clock.
@@ -24,5 +24,5 @@ Throughput | ~520kB/s | Linke is operating at the physical limit of the 3.9MHz c
 ## 3. Hardware Validation
 Physical validation was performed using a Diligent AD3 Logic Analyzer to verify data integrity and pipeline latency.
 
-![Logic Analyzer Trace](docs/phase1/screenshots/simple_spi_LA.png)
+![Logic Analyzer Trace](screenshots/simple_spi_LA.png)
 *Fig 1: Logic Analyzre capture showing 1'B pipeline delay*
