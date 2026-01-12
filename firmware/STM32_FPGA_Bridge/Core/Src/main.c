@@ -350,7 +350,7 @@ void StartDefaultTask(void *argument)
 	  // toggle random LED maybe
 
 	  // update every 1s
-	  osDelay(1000);
+	  osDelay(10);
   }
   /* USER CODE END 5 */
 }
@@ -365,38 +365,40 @@ void StartDefaultTask(void *argument)
 void StartSpiTask(void *argument) {
 	/* USER CODE BEGIN StartSpiTask */
 	// 1. define a test buffer
-	uint8_t tx_buffer[4];
-	uint8_t rx_buffer[4];
-	uint8_t counter = 0;
+	uint8_t tx_buffer[2];
+	uint8_t rx_buffer[2];
 
 	/* Infinite loop */
 	for (;;) {
 		// 1. Prepare Packet: [VAl] [Dummy] x3
-		tx_buffer[0] = counter;
-		tx_buffer[1] = 0x00;
-		tx_buffer[2] = 0x00;
-		tx_buffer[3] = 0x00;
+		tx_buffer[0] = 0xAA;		// setup
+		tx_buffer[1] = 0x55;		// Dummy
+
 
 		// 2. Chip Select Low
 		HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
 
-		// 3. Transmit AND Receive simultaneously
-		// The FPGA needs these clock cycles to push "Hi" back to us.
-		HAL_SPI_TransmitReceive(&hspi4, tx_buffer, rx_buffer, 4, 100);
+		// 3. Transmit burst
+		// keeps clock running for 16 cycles w/o CS toggling
+		// mshould match TB behavior
+		if (HAL_SPI_TransmitReceive(&hspi4, tx_buffer, rx_buffer, 2, 100) == HAL_OK) {
+			// 4. CS high - end Tx
+			HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
 
-		// 4. Chip Select High
-		HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
+			// verify
+			printf("Sent: [0x%02X, 0x%02X] | Recv: [0x%02X, 0x%02X]\n", tx_buffer[0], tx_buffer[1], rx_buffer[0], rx_buffer[1]);
 
-		// 5. Print Response to Console (SWV)
-		// Expectation: rx_buffer[1] should be the counter, [2]='H', [3]='i'
-		printf("Sent: %d | Recv: %d %c%c\n",
-				counter,
-				rx_buffer[1], rx_buffer[2], rx_buffer[3]);
-
-		counter++;
-		osDelay(100); // 10Hz update
+		} else {
+			// Error handling if SPI fails
+			HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
+        	printf("SPI Error\n");
+		}
+		osDelay(1);
 
 	}
+
+
+
 	/* USER CODE END StartSpiTask */
 }
 
