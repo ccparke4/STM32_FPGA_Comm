@@ -13,7 +13,7 @@ module top(
     // Instantiate SPI Slave
     spi_slave spi_inst (
         .clk            (clk),
-        .sclk           (sclk),
+        .sclk           (JA4),
         .cs             (JA1),
         .mosi           (JA2),
         .miso           (JA3),

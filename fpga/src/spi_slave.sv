@@ -54,9 +54,9 @@ module spi_slave(
                 // 0'B -> Echo captured value
                 // 1'B -> 'H' 2'B -> 'i'
                 case (byte_index)
-                    0: byte_to_send <= data_received;   // echo loopback
-                    1: byte_to_send <= 8'h48;           // ASCII 'H', 8 bits
-                    2: byte_to_send <= 8'h69;           // ASCII 'i', 8 bits
+                    1: byte_to_send <= data_received;   // echo loopback
+                    2: byte_to_send <= 8'h48;           // ASCII 'H', 8 bits
+                    3: byte_to_send <= 8'h69;           // ASCII 'i', 8 bits
                     default: byte_to_send <= 8'h00;
                 endcase
                 
