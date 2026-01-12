@@ -31,35 +31,37 @@ module spi_slave(
     
     always_ff @(posedge clk) begin
         if (!cs_active) begin
-            bit_cnt     <= '0;
-            byte_index  <= '0;
-            miso        <= 1'b0;
+            bit_cnt      <= '0;
+            byte_index   <= '0;
+            miso         <= 1'b0;
+            byte_to_send <= 8'h00;
         end else begin
             // 1. Sample MOSI (Input) on Rising Edge
             if (sclk_rising) begin
                 shift_reg <= {shift_reg[6:0], mosi_sync};
                 bit_cnt   <= bit_cnt + 1;
                 
-                // Byte Complete?
+                // --- END OF BYTE DET. ---
                 if (bit_cnt == 7) begin
                     // If its the first byte, save to the display register
                     if (byte_index == 0) data_received <= {shift_reg[6:0], mosi_sync};
                     byte_index <= byte_index + 1;
+                    
+                    // --- PRELOAD the NEXT BYTE ---
+                    // look at (byte_index + 1) as we prepare for upcoming transaction
+                    case (byte_index + 1)
+                        1: byte_to_send <= {shift_reg[6:0], mosi_sync};     // loopback echo
+                        2: byte_to_send <= 8'h48;                           // 'H'
+                        3: byte_to_send <= 8'h69;                           // 'i'
+                        default: byte_to_send <= 8'h00;
+                    endcase 
                 end
             end
             
             // 2. Drivre MISO (Output) on falling edge
             if (sclk_falling) begin
-                // Det. response packet structure
-                // 0'B -> Echo captured value
-                // 1'B -> 'H' 2'B -> 'i'
-                case (byte_index)
-                    1: byte_to_send <= data_received;   // echo loopback
-                    2: byte_to_send <= 8'h48;           // ASCII 'H', 8 bits
-                    3: byte_to_send <= 8'h69;           // ASCII 'i', 8 bits
-                    default: byte_to_send <= 8'h00;
-                endcase
-                
+                // as bit_cnt wraps to 0 after 7
+                // bit_cnt already 0 here for first bit of the new byte
                 // shift out the bit
                 if (bit_cnt == 0) miso <= byte_to_send[7];
                 else              miso <= byte_to_send[7 - bit_cnt];
