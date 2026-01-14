@@ -205,7 +205,7 @@ Transfers: 6715000 | Errors: 0 | Last Rx: 0x76
 
 #### Logic Analyzer Capture
 Verified correct pipeline behavior:
-![SPI Stress Test - Logic Analyzer](phase1/screenshots/stress_spi_LA_00.png)
+![SPI Stress Test - Logic Analyzer](demo_startup/screenshots/stress_spi_LA_00.png)
 
 ### __Performance Metrics__
 | Metric | Value |

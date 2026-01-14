@@ -29,34 +29,4 @@ By isolating control traffic, the data plane becomes a pure streaming interface 
 
 ### 2.1 Block Diagram
 
-```mermaid
-flowchart TB
-    subgraph STM32 ["STM32H723ZG (Host)"]
-        direction TB
-        I2C_Task[("I2C Task<br>(Control Plane)")]
-        Data_Task[("Data Streaming Task<br>(SPI/QSPI/FMC)")]
-    end
-
-    subgraph FPGA ["Artix-7 FPGA (Slave)"]
-        direction TB
-        I2C_Slave["I2C Slave Interface"]
-        Reg_File["Register File<br>(Config/Status)"]
-        Data_Engine["Data Engine<br>(FIFO/DMA)"]
-        SPI_Slave["High-Speed Slave PHY"]
-    end
-
-    %% Connections
-    I2C_Task ==>|I2C: 400kHz<br>Config & IRQ| I2C_Slave
-    Data_Task ==>|SPI/QSPI: 50MHz+<br>Raw Data Stream| SPI_Slave
-
-    %% Internal FPGA routing
-    I2C_Slave <--> Reg_File
-    Reg_File -.->|Control Signals| Data_Engine
-    Data_Engine <--> SPI_Slave
-
-    %% Styling
-    classDef mcu fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
-    classDef fpga fill:#f3e5f5,stroke:#4a148c,stroke-width:2px;
-    class STM32,I2C_Task,Data_Task mcu;
-    class FPGA,I2C_Slave,Reg_File,Data_Engine,SPI_Slave fpga;
-    ```
+![System Block Diagram v0.1](Visualization/System_Architecture_v01.png)
