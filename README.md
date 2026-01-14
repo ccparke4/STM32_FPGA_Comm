@@ -27,17 +27,17 @@ __Key Features:__
 
 ## Current Roadmap
 This project is currently in active development.
-- [x] __Phase 1: Physical Layer (PHY)__
+- [x] **Phase 1: Physical Layer (PHY) & Validation**
     - [x] Establish SPI Master (STM32) and Slave (FPGA) link.
-    - [x] Implement CDC syncronization for stable data latching.
-    - [x] Verify basic echo protocol.
-    - [x] Stress test basic echo protocol.
+    - [x] Implement CDC synchronization for stable data latching.
+    - [x] **DMA Integration:** Migrated from Polling/Interrupts to circular DMA buffers.
+    - [x] **Stability Fix:** Solved "1-Bit Left Shift" issue by migrating to SPI Mode 1 with FPGA-side shift guards.
+    - [x] Verify data integrity (0% BER) on 64-byte burst packets.
 - [ ] **Phase 2: Architecture & Protocol**
     - [ ] **Register Protocol:** Define a packet structure for setting FPGA parameters.
     - [ ] **Split Data Plane:** Implement FPGA BRAM FIFOs to decouple high-speed data acquisition from MCU sleep cycles.
     - [ ] **Benchmarking:** Measure Round-Trip Latency and Max Throughput (MB/s).
     - [ ] **Expansion:** Evaluate "Smart NIC" architecture (STM32 $\to$ FPGA $\to$ ESP32/WiFi).
-
 - [ ] **Phase 3: Application Layer (Acceleration)**
     - [ ] **Workload:** Real-time synthetic pattern generation or edge detection.
     - [ ] **Data Flow:** STM32 configures pipeline $\to$ FPGA processes streaming data $\to$ Results read back via DMA.
