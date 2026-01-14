@@ -165,6 +165,14 @@ SECTIONS
     . = . + _Min_Stack_Size;
     . = ALIGN(8);
   } >RAM_D1
+  
+  .ram_d2_data (NOLOAD) :
+  {
+  	. = ALIGN(32);
+  	*(.RAM_D2)	
+  	*(.RAM_D2*)
+  	. = ALIGN(32);
+  } >RAM_D2
 
   /* Remove information from the standard libraries */
   /DISCARD/ :

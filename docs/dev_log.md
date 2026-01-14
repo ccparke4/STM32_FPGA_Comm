@@ -222,10 +222,60 @@ Verified correct pipeline behavior:
 - [x] 7-segment display updates correctly
 - [x] Logic analyzer confirms timing
 
+## Entry 5: DMA Intgration & Sync. Fix
+__Date:__ 01/13/2026
+
+### __Objectives__
+- Migrate from CPU-polled SPI to DMA-based transfers
+- Establish stable burst transfers (64'B packets)
+- Eliminate 'bit-slip' errors observed during high-speed burst transitions.
+
+### __Issue: "1-bit Left Shift"__
+During initial DMA testing, data integrity was compromised. The FPGA was correctly receiving data, but MISO data read by MCU was shifted left by 1'b (expected 0xC7, Rx'd 0x8E)
+
+- __Analysis:__ The issue was the result of an edge-race condition on the very first bit of a transaction. In standard CPHA=0 mode, the first bit must be valid prior to first clock edg. FPGA logic was shifting `shift_out` on the first rising edge, destroying the MSB before the master could sample it.
+
+### __Fix: SPI Mode 1 Transistion__
+Migrated the physical link to SPI Mode 1 (CPOL=0, CPHA=1). Tjis defines clearer setup/hold roles:
+
+1. MISO shifts on rising edge (setup)
+2. Master samples on falling edge (sample)
+
+#### __FPGA Implementation (Shift Guard)__
+Crucially, in HDL a "shift guard" was implemented to prevent shifting during the setup phase of the very first bit:
+```systemverilog
+// --- SPI Mode 1 Implementation ---
+// Logic: Shift MISO on Rising, Sample MOSI on Falling
+if (sclk_rising) begin
+// FIX - Don't shift on very first bit
+// CPHA, 1st bit must be valid before 1st clock
+// we load 'shift_out' at CS_falling (burst reload)
+// bit 7 already on wire. Shifting now loses MSB
+    if (bit_cnt != 3'd0) begin
+        shift_out   <= {shift_out[6:0], 1'b0};
+    end
+end
+```
+
+#### __STM32 Config__
+- __Mode:__ SPI Mode 1
+- __CPOL:__ Low
+- __CPHA:__ 2 Edge
+
+### __Results__
+The link is now fully sync'd. DMA tx's of 64-B buffers are 100% accurate. 
+
+| DMA Tx ID | Match Count | Bit Shift | Data Sample |
+|-----------|-------------|-----------|-------------|
+| 100 | 63/64 | 0 | `Rx[1]: 63` (exp. 63) |
+| 200 | 63/64 | 0 | `Rx[1]: C7` (exp. C7) |
+| 300 | 63/64 | 0 | `Rx[1]: 2B` (exp. 2B) |
+
+_Note:_ `Rx[0]` is set to be a dummy byt (Shifted: 1 on first byte only), which is planned to be standard for this high-speed SPI implementation.
+
 ## Next Steps
-### DMA Integration 
-Offload SPI transfers from CPU to DMA controller for higher throughput and lower CPU utilization.
-* __Goal:__ Achieve continuous streaming without CPU intervention.
-* __Benefit:__ Free CPU cycles for processing
-* __Implementation:__ Config STM32 SPI4 with DMA TX/RX circular buffers.
+- __Software:__ Investigate/Implement a CMD/RSP protocol (Header/Payload/CRC) so the FPGA can be reliably written to with HDL defined Regs.
+- __Benchmarking:__ Run throughput & latency tests. Document limits, useful to analyze likely QSPI evolution.
+- __Architecture__: Investigate/Implement a BRAM FIFO on FPGA. Move to "Block Read" architecture where the STM32 may be put in a sleep or another state until FPGA has data ready. Need to define MCU side operations/tasks.
+
 

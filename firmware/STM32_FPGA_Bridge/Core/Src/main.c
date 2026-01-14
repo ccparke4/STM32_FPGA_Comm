@@ -43,6 +43,8 @@
 /* Private variables ---------------------------------------------------------*/
 
 SPI_HandleTypeDef hspi4;
+DMA_HandleTypeDef hdma_spi4_tx;
+DMA_HandleTypeDef hdma_spi4_rx;
 
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -66,13 +68,18 @@ const osThreadAttr_t debugTask_attributes = {
   .priority = (osPriority_t) osPriorityBelowNormal,
 };
 /* USER CODE BEGIN PV */
+extern volatile uint8_t spi_dma_complete;
 
+// out of stack, put in SRAM (global); align for cache
+__attribute__((section(".RAM_D2"))) __attribute__((aligned(32))) uint8_t tx_buffer[64];
+__attribute__((section(".RAM_D2"))) __attribute__((aligned(32))) uint8_t rx_buffer[64];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MPU_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_SPI4_Init(void);
 void StartDefaultTask(void *argument);
 void StartSpiTask(void *argument);
@@ -108,6 +115,14 @@ int main(void)
   /* MPU Configuration--------------------------------------------------------*/
   MPU_Config();
 
+  /* Enable the CPU Cache */
+
+  /* Enable I-Cache---------------------------------------------------------*/
+  SCB_EnableICache();
+
+  /* Enable D-Cache---------------------------------------------------------*/
+  SCB_EnableDCache();
+
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -126,6 +141,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_SPI4_Init();
   /* USER CODE BEGIN 2 */
 
@@ -264,7 +280,7 @@ static void MX_SPI4_Init(void)
   hspi4.Init.Direction = SPI_DIRECTION_2LINES;
   hspi4.Init.DataSize = SPI_DATASIZE_8BIT;
   hspi4.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi4.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi4.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi4.Init.NSS = SPI_NSS_SOFT;
   hspi4.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
   hspi4.Init.FirstBit = SPI_FIRSTBIT_MSB;
@@ -292,6 +308,25 @@ static void MX_SPI4_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Stream0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
+  /* DMA1_Stream1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -310,13 +345,13 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : SPI_CS_Pin */
   GPIO_InitStruct.Pin = SPI_CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(SPI_CS_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
@@ -362,73 +397,93 @@ void StartDefaultTask(void *argument)
 * @retval None
 */
 /* USER CODE END Header_StartSpiTask */
-void StartSpiTask(void *argument) {
-	/* USER CODE BEGIN StartSpiTask */
-
-	// Stress test vars
-	uint8_t tx_byte = 0;			// Rolling counter (0-255)
-	uint8_t rx_byte = 0;			// Rx'd byte
-	uint8_t expected_val = 0;   	// Verif. val
-	uint32_t total_transfers = 0;	// Bit slip counter
+void StartSpiTask(void *argument)
+{
+  /* USER CODE BEGIN StartSpiTask */
+	uint32_t transfer_count = 0;
 	uint32_t error_count = 0;
+	spi_dma_complete = 0;
 
-	printf("Starting SPI Stress Test...\n");
+	// location of DMA buffs
+
+	printf("Tx Buffer Addr: %p\n", tx_buffer);
+	printf("Rx Buffer Addr: %p\n", rx_buffer);
+
+	// clear buffer to 0xFF for debug
+	memset(rx_buffer, 0x00, 64);
+
+
+	// initial Tx pattrn
+	for (int i = 0; i < 64; i++) {
+		tx_buffer[i] = i;
+	}
+
+	printf("Starting DMA SPI Test...\n");
 
 	/* Infinite loop */
 	for (;;) {
-		// 1. Chip Select Low
+
+		// reset DMA flag before tx
+		spi_dma_complete = 0;
+
+		// 1. CLEAN: Flush CPU data (tx_buffer) from Cache -> Physical RAM so DMA can see it
+		SCB_CleanDCache_by_Addr((uint32_t*) tx_buffer, 64);
+
+		// 2. INVALIDATE: Scrub the Rx area so CPU is forced to re-read it later
+		SCB_InvalidateDCache_by_Addr((uint32_t*) rx_buffer, 64);
+
+		//  Chip Select Low
 		HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
 
-		// 2. Tx/Rx 1 Byte
-		// use a small time out, as 1 byte at 3.9MHz takes ~2us
-		if (HAL_SPI_TransmitReceive(&hspi4, &tx_byte, &rx_byte, 1, 10) == HAL_OK) {
-			// 3. CS high
+		//  Tx/Rx 1 Byte
+		// non-blocking, wait for completion
+		if(HAL_SPI_TransmitReceive_DMA(&hspi4, tx_buffer, rx_buffer, 64) != HAL_OK) {
+			printf("DMA SPI Error!\n");
 			HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
-
-			// 4. Verification logic
-			// FPGA pipeline - Rx prev byte sent
-			// So Rx=(Tx -1)
-			if (total_transfers > 0) {	// skip 1st byte (pipeline filling)
-				expected_val = tx_byte - 1;
-				// uint8_t handles overflow
-
-				if (rx_byte != expected_val) {
-					error_count++;
-					printf("FAIL: Tx: %02X, Rx: %02X\n", tx_byte, rx_byte);
-				}
-
-			}
-			// 5. update counters
-			tx_byte++;
-			total_transfers++;
-
-
-		} else {
-			// Error handling if SPI fails
-			HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
-        	printf("SPI Error\n");
-        	osDelay(5);
+			osDelay(10);
+			continue;
 		}
 
-		// 5. Periodic report
-		// print every 50kB, ~0.1s
-		if ((total_transfers % 5000) == 0) {
-			printf("Transfers: %lu | Errors: %lu | Last Rx: 0x%02X\n",
-			                   total_transfers, error_count, rx_byte);
-
-			// dont starve processor
+		// wait for callback
+		while (!spi_dma_complete) {
 			osDelay(1);
-
 		}
 
-		// 6. update counters
+		// CS high
+		HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
 
+		// 3. INVALIDATE AGAIN: DMA just wrote to RAM.
+		// We must flush the Cache's old idea of 'rx_buffer' so the CPU reads the new data.
+		SCB_InvalidateDCache_by_Addr((uint32_t*) rx_buffer, 64);
+
+		// verification: rx_buffer should equal tx_buffer[n-1] (pipe delay)
+		int exact_match = 0;
+		int left_shift = 0;
+		for (int i = 1; i < 64; i++){
+			if (rx_buffer[i] == tx_buffer[i-1]) exact_match++;
+			if (rx_buffer[i] == (uint8_t)(tx_buffer[i-1] << 1)) left_shift++;
+		}
+
+		transfer_count++;
+
+		//  Periodic report every 1000 txs
+		if ((transfer_count % 100) == 0) {
+		    printf("DMA: %lu | Match: %d | Shifted: %d | Rx[1]:%02X | Exp:%02X\n",
+		            transfer_count, exact_match, left_shift, rx_buffer[1], tx_buffer[0]);
+		}
+
+		// update test pattern
+		for (int i = 0; i < 64; i++) {
+			tx_buffer[i]++;
+		}
+
+		osDelay(10);
 
 	}
 
 
 
-	/* USER CODE END StartSpiTask */
+  /* USER CODE END StartSpiTask */
 }
 
 /* USER CODE BEGIN Header_StartDebugTask */
@@ -471,6 +526,18 @@ void MPU_Config(void)
   MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
   MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
   MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
+
+  /** Initializes and configures the Region and the memory to be protected
+  */
+  MPU_InitStruct.Number = MPU_REGION_NUMBER1;
+  MPU_InitStruct.BaseAddress = 0x30000000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_32KB;
+  MPU_InitStruct.SubRegionDisable = 0x0;
+  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL1;
+  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
+  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
 
   HAL_MPU_ConfigRegion(&MPU_InitStruct);
   /* Enables the MPU */

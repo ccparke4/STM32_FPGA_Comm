@@ -4,7 +4,8 @@
 High-speed, real-time bridge between a __Nucleo-H723ZG__ and a __Basys 3 (Artix-7 FPGA)__. This project demonstrates heterogeneous computing by offloading low-level I/O and acceleration tasks to the FPGA while maintaining high-level control on the MCU via __FreeRTOS__.
 
 __Key Features:__
-* __Full-Duplex SPI Link:__ Custom packet-based protocol designed for reliable, high-speed bidirectional data transfer.
+* __DMA-Accelerated SPI:__ Non-blocking, full-duplex communication using STM32 DMA controllers (SPI4).
+* __Robust Phy Layer:__ Implements _SPI Mode 1 (CPOL=0, CPHA=1)_ with custom shift guard logic on FPGA to ensure data integrity during high-speed transfers.
 * __CDC (Clock Domain Crossing):__ 3-stage synchronization logic to bridge asynchronous 7.8MHz SPI and 100MHz FPGA clock domains.
 * __Real-Time Diagnostics:__ Integration with STM32 SWV ITM Data Console for debugging.
 * __Visual Feedback:__ FPGA parses packets to drive a 7-segment display and LED array.
@@ -31,20 +32,15 @@ This project is currently in active development.
     - [x] Implement CDC syncronization for stable data latching.
     - [x] Verify basic echo protocol.
     - [x] Stress test basic echo protocol.
-- [ ] __Phase 2: High-Performance I/O__
-    - [ ] Implement DMA (Direct Memory Access) on STM32 to offload CPU.
-    - [ ] Increase SPI Clock frequency
-    - [x] Perform long-duration stress testing to measure Bit Error Rate.
-    - [ ] Evaluate Quad-SPI Implementation to widen bus from 1'b to 4b to increase bandwidth.
-    - [ ] Investigate the implementing/designing a split architecture. Seperating Control vs Data via adding I2C to handle "Out-of-Band" management.
-- [ ] __Phase 3: Application Layer (Visual Processing)__
-    - [ ] __Potential Workloads (TBD):__ 
-        - Real-time Edge Detection (Sobel/Canny).
-        - Image Binaritization/Thresholding.
-        - Synthetic Pattern Generation?
-    - [ ] __Data Flow:__
-        - STM32 generates/fetches image frame $\to$ SPI Burst $\to$ FPGA.
-        - FPGA acts as a streaming accelerator $\to$ Processed Frame $\to$ Display.
+- [ ] **Phase 2: Architecture & Protocol**
+    - [ ] **Register Protocol:** Define a packet structure for setting FPGA parameters.
+    - [ ] **Split Data Plane:** Implement FPGA BRAM FIFOs to decouple high-speed data acquisition from MCU sleep cycles.
+    - [ ] **Benchmarking:** Measure Round-Trip Latency and Max Throughput (MB/s).
+    - [ ] **Expansion:** Evaluate "Smart NIC" architecture (STM32 $\to$ FPGA $\to$ ESP32/WiFi).
+
+- [ ] **Phase 3: Application Layer (Acceleration)**
+    - [ ] **Workload:** Real-time synthetic pattern generation or edge detection.
+    - [ ] **Data Flow:** STM32 configures pipeline $\to$ FPGA processes streaming data $\to$ Results read back via DMA.
 
 ---
 *For more detailed info, see [docs/dev_log.md](docs/dev_log.md).*
