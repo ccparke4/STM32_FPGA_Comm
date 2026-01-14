@@ -28,5 +28,252 @@ By isolating control traffic, the data plane becomes a pure streaming interface 
 ## 2. System Architecture
 
 ### 2.1 Block Diagram
-
 ![System Block Diagram v0.1](Visualization/SysArchitecture_v0.1.png)
+
+
+### 2.2 Data Plane Modes
+Data plane interface is selected via I2C config.
+
+| Mode | Interface | Clock | Width | Throughput (est) | Use Case |
+|------|-----------|-------|-------|------------------|----------|
+| 0 | SPI | 1-10MHz | 1'b | ~1MB/s | Basic, default |
+| 1 | SPI | 10-25MHz | 1'b | ~3MB/s | Standard operation |
+| 2 | QSPI | 25-50MHz | 4'b | ~25MB/s | High throughput |
+| 3 | FMC | 50-100MHz | 16'b | ~100MB/s | Maximum Bandwidth |
+
+### 2.3 Mode Tranistion Diagram
+![System Block Diagram v0.1](Visualization/Mode_transition.png)
+
+### 2.4 Interface Responsibilities
+| Interface | Responsibilities | Never Does |
+|-----------|------------------|------------|
+| I2C | Reg. R/W, mode config, status poll, IRQ handling | Bulk data transfer |
+| Data Plane | Raw byte streaming, DMA transfers | Command parsing, protocol framing |
+
+## 3. Control Plane Protocol (I2C)
+
+### 3.1 I2C Configuration
+| Parameter | Value | Notes |
+| Mode | Fast Mode (400kHz) | Ensure stability |
+| Addressing | 7'b | Default: 0x50 |
+| Clock Stretch | Supported | FPGA may hold SCL during register access? |
+
+### 3.2 I2C Slave Address 
+The FPGA I2C slave address can be configured via dedicated pins:
+| A1 | A0 | Address |
+|----|----|---------|
+| 0 | 0 | 0x50 |
+| 0 | 1 | 0x51 |
+| 1 | 0 | 0x52 |
+| 1 | 1 | 0x53 |
+
+### 3.3 Register Access Protocol
+__1'B Write:__
+START - ADDR+W - ACK - REG - ACK - DATA - ACK - STOP
+
+__1'B Read:__
+START - ADDR+W - ACK - REG - ACK - STORE - ADDR+R - ACK - DATA - NACK - STOP
+
+__Multi-Byte Write (auto-increment):__
+STOP ─ ADDR+W ─ ACK ─ REG ─ ACK ─ DATA0 ─ ACK ─ DATA1 ─ ACK ─ ... ─ STOP
+
+__Multi-Byte Read (auto-increment):__
+START ─ ADDR+W ─ ACK ─ REG ─ ACK ─ STORE ─ ADDR+R ─ ACK ─ DATA0 ─ ACK ─ DATA1 ─ ACK ─ ... ─ NACK ─ STOP
+
+### 3.4 Register Auto-Incrment
+The register pointr auto-increments after each byte, enabling efficient block transfers:
+```c++
+// STM32: Read 4'B starting at register 0x10
+uint8_t buf[4];
+HAL_I2C_Mem_Read(&hi2c1, FPGA_ADDR, 0x10, I@C_MEMADD_SIZE_8BIT, buf, 4, 100);   // NOTE: may not be on i2c ch 1 depending on perip avail.
+// Returns: REG[0x10], REG[0x11], REG[0x12], REG[0x13]
+```
+
+### 3.5 Error Handling
+| Condition | FPGA Response |
+|-----------|---------------|
+| invalid register address | NACK on reg byte |
+| write to read only reg | ACK but ignore |
+| read during busy | clock stretch until ready |
+
+## 4. Register Map
+### 4.1 Register Overview
+| Range | Block | Description |
+| 0x00-0x0F | System | ID, version, status, test |
+| 0x10-0x1F | Link Control | Data plane mode, capabilities |
+| 0x20-0x2F | GPIO | LED, switch, user I/O |
+| 0x30-0x3F | Data Engine | FIFO status, DMA config. |
+| 0x40-0xFF | Reserved | Expansion |
+
+### 4.2 System Registers (0x00-0x0F)
+| Addr | Name | R/W | Reset | Description |
+|------|------|-----|-------|-------------|
+| 0x00 | DEVICE_ID | R | 0xA7 | Device identifier |
+| 0x01 | VERSION_MAJ | R | 0x01 | Firmware major version |
+| 0x02 | VERSION_MIN | R | 0x00 | Firmware minor version |
+| 0x03 | SYS_STATUS | R | 0x01 | System status flags |
+| 0x04 | SYS_CTRL | R/W | 0x00 | System control |
+| 0x05 | SCRATCH0 | R/W | 0x00 | Test reg. 0 |
+| 0x06 | SCRATCH1 | R/W | 0x00 | Test reg. 1 |
+| 0x07-0x0F | RESERVED | - | 0x00 | - |
+
+#### SYS_STATUS (0x03):
+bit 7   - I2C ready
+bit 6   - Data plane ready
+bit 5   - Error flag (sticky, must write 1 to clear)
+bit 4   - IRQ pending
+bit 3:0 - RESERVED
+
+### 4.3 Link Control Registers (0x10-0x1F)
+| Addr | Name | R/W | Reset | Description |
+|------|------|-----|-------|-------------|
+| 0x10 | LINK_CAPS | R | * | Data plane capability flags |
+| 0x11 | DATA_MODE | R/W | 0x00 | Active data plane mode (0-3) |
+| 0x12 | DATA_CLK_DIV | R/W | 0x04 | Data plane clock divisor |
+| 0x13 | DATA_STATUS | R | 0x00 | Data plane health |
+| 0x14 | DATA_ERR_CNT | R | 0x00 | Error counter (clears on read) |
+| 0x15 | DATA_TEST | R/W | 0x00 | Test pattern trigger |
+| 0x17-0x1F | RESERVED | - | 0x00 | - |
+
+#### LINK_CAPS (0x10)
+bit 7:6 -   Max bus width
+            00 = 1'b -> SPI
+            01 = 2'b -> DUAL SPI
+            10 = 4'b -> QSPI
+            11 = 8'b -> QSPI
+
+bit 5:4 -   Max clock tier
+            00 = 10MHz
+            01 = 25MHz
+            10 = 50MHz
+            11 = 100MHz
+
+bit 3   -   FMC interface available
+bit 2   -   DMA streaming supported
+bit 1   -   Hardware CRC available
+bit 0   -   IRQ output available
+
+#### DATA_MODE (0x11)
+bit 7   -   Enable data plane
+bit 6   -   Loopback mode (testing/debug)
+bit 5:4 -   RESERVED
+bit 3:2 -   Bus width (00=1, 01=2, 10=4, 11=8)
+bit 1:0 -   Mode select (00=SPI, 01=SPI-HI, 10=QSPI, 11=FMC)
+
+### 4.4 GPIO Registers (0x20-0x2F)
+| Addr | Name | R/W | Reset | Description |
+|------|------|-----|-------|-------------|
+| 0x20 | LED_OUT | R/W | 0x00 | LED[7:0] output |
+| 0x21 | LED_OUT_H | R/W | 0x00 | LED[15:8] output |
+| 0x22 | SW_IN | R | - | Switch[7:0] input |
+| 0x23 | SW_IN_HI | R | - | Switch[15:8] input |
+| 0x24 | SEG_DATA | R/W | 0x00 | 7-segment display data |
+| 0x25 | SEG_CTRL | R/W | 0x00 | 7-segment control |
+
+### Data Engine Registers (0x30-0x3F)
+| Addr | Name | R/W | Reset | Description |
+|------|------|-----|-------|-------------|
+| 0x30 | FIFO_STATUS | R | 0x00 | TX/RX FIFO status |
+| 0x31 | FIFO_TX_LVL | R | 0x00 | TX FIFO fill level |
+| 0x32 | FIFO_RX_LVL | R | 0x00 | RX FIFO fill level |
+| 0x33 | FIFO_CTRL | R/W | 0x00 | FIFO control (flush, enable) |
+
+#### FIFO_STATUS (0x30)
+bit 7   - TX FIFO full
+bit 6   - TX FIFO empty
+bit 5   - TX FIFO half
+bit 4   - RX FIFO full
+bit 3   - RX FIFO empty
+bit 2   - RX FIFO half
+bit 1   - Overflow error
+bit 0   - underflow error
+
+## 5. Initialization & Mode Configuration
+### 5.1 Boot Sequence
+![Boot diagram v0.1](Visualtization/bootdiagram.png)
+
+### 5.2 STM32 Initialization Code [DRAFT]
+```c
+#define FPGA_I2C_ADDR   0x50
+
+typedef struct {
+    uint8_t device_id;
+    uint8_t version_maj;
+    uint8_t version_min;
+    uint8_t link_caps;
+} fpga_info_t;
+
+HAL_StatusTypeDef fpga_init(I2C_HandleTypeDef *hi2c, fpga_info_t *info) {
+    // Phase 1: Enumerate
+    if (HAL_I2C_Mem_Read(hi2c, FPGA_I2C_ADDR << 1, 0x00, 
+            I2C_MEMADD_SIZE_8BIT, &info->device_id, 1, 100) != HAL_OK) {
+        return HAL_ERROR;  // FPGA not found
+    }
+    
+    if (info->device_id != 0xA7) {
+        return HAL_ERROR;  // Wrong device
+    }
+    
+    // Read version
+    HAL_I2C_Mem_Read(hi2c, FPGA_I2C_ADDR << 1, 0x01, I2C_MEMADD_SIZE_8BIT, &info->version_maj, 1, 100);
+    HAL_I2C_Mem_Read(hi2c, FPGA_I2C_ADDR << 1, 0x02, I2C_MEMADD_SIZE_8BIT, &info->version_min, 1, 100);
+    
+    // Phase 2: Get capabilities
+    HAL_I2C_Mem_Read(hi2c, FPGA_I2C_ADDR << 1, 0x10, I2C_MEMADD_SIZE_8BIT, &info->link_caps, 1, 100);
+    
+    return HAL_OK;
+}
+
+HAL_StatusTypeDef fpga_set_data_mode(I2C_HandleTypeDef *hi2c, uint8_t mode) {
+    uint8_t data_mode = 0x80 | mode;  // Enable + mode
+    return HAL_I2C_Mem_Write(hi2c, FPGA_I2C_ADDR << 1, 0x11,I2C_MEMADD_SIZE_8BIT, &data_mode, 1, 100);
+}  
+```
+
+### 5.3 Runtime Mode Switching
+Mode changes can occur at runtime without reset:
+```c
+// Switch from SPI to QSPI
+fpga_set_data_mode(&hi2c1, 0x02);  // Mode 2 = QSPI
+
+// Wait for FPGA to reconfigure
+HAL_Delay(1);
+
+// Reconfigure STM32 OCTOSPI peripheral
+MX_OCTOSPI1_Init_QSPI();  // User-defined reconfig function
+```
+
+## 6. Implementation Plan
+| Phase | Scope | Interface | Deliverable |
+|-------|-------|-----------|-------------|
+| A | I2C & Reg file | I2C only | Basic R/W working |
+| B | System & GPIO regs | I2C | LED control via I2C |
+| C | Link control regs | I2C | LINK_CAPS query |
+| D | SPI data plane (extend) | I2C + SPI | Streaming & config |
+| E | Dynamic SPI clock | I2C + SPI | Runtime clock change |
+| F | QSPI datapath | I2C + QSPI | 4-wire streaming |
+| G | FMC interface | I2C + FMC | Parallel data plane |
+
+## 7. FPGA Module Design
+### 7.1 Top-Level Block Diagram
+![FPGA Top Level Block Diagram](Visualization/fpga_toplvl_diagram.png)
+
+### 7.2 Module Hierarchy
+fpga_top
+- i2c_slave         # I2C slave interface
+    - i2c_bit_ctrl  # SDA/SCL bit-level control
+    - i2c_byte_ctrl # Byt assembly, ACK/NACK
+- register_file     # Central register bank
+    - sys_regs      # 0x00-0x0F
+    - link_regs     # 0x10-0x1F
+    - gpio_regs     # 0x20-0x2F
+    - fifo_regs     # 0x30-0x3F
+- spi_slave         # SPI data plane (existing)
+    - led_driver    
+    - seg7_driver
+            
+## 9. Revision History 
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 0.1 | 2026-01-14 | Trey P. | Architecture Draft |
+
