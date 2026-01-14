@@ -242,7 +242,7 @@ Migrated the physical link to SPI Mode 1 (CPOL=0, CPHA=1). Tjis defines clearer 
 2. Master samples on falling edge (sample)
 
 #### __FPGA Implementation (Shift Guard)__
-Crucially, in HDL a "shift guard" was implemented to prevent shifting during the setup phase of the very first bit:
+"shift guard" was implemented to prevent shifting during the setup phase of the very first bit:
 ```systemverilog
 // --- SPI Mode 1 Implementation ---
 // Logic: Shift MISO on Rising, Sample MOSI on Falling
@@ -273,9 +273,43 @@ The link is now fully sync'd. DMA tx's of 64-B buffers are 100% accurate.
 
 _Note:_ `Rx[0]` is set to be a dummy byt (Shifted: 1 on first byte only), which is planned to be standard for this high-speed SPI implementation.
 
-## Next Steps
-- __Software:__ Investigate/Implement a CMD/RSP protocol (Header/Payload/CRC) so the FPGA can be reliably written to with HDL defined Regs.
-- __Benchmarking:__ Run throughput & latency tests. Document limits, useful to analyze likely QSPI evolution.
-- __Architecture__: Investigate/Implement a BRAM FIFO on FPGA. Move to "Block Read" architecture where the STM32 may be put in a sleep or another state until FPGA has data ready. Need to define MCU side operations/tasks.
+## Entry 6: Adaptive Link Architecture - Design Phase
+__Date:__ 01/14/2026
+
+### __Objectives__
+- Define scalable architecture for high-bandwidth FPGA comm. (need to keep latency in mind...)
+- Document design
+- Estiblish dev. plan
+
+### __Completed Work__
+Drafted [adaptive_link_spec.md](architecture/adaptive_link_spec.md) (v0.1) defining dual-bus architecture:
+
+| Plane | Interface | Role |
+|-------|-----------|------|
+| Control | I2C | Config, status, negotiation |
+| Data | SPI/QSPI/FMC | Raw streaming |
+
+### __Design Considerations:__
+__1. I2C for control plane__ - standard register access, no custom framing, independent from data path (Careful implementation needed).
+__2. Data plane simplicity__ - Raw bytes, avoid protocol overhead
+__3. Capability aiscovery__ - LINK_CAPS register for runtime negotiation
+__4. Configurable addressing__ - I2C slave address selectable via ?/? pins (still need to verify this...) (0x50-0x53).
+
+### __Documentation Created__
+- [adaptive_link_spec.md](architecture/adaptive_link_spec.md)
+    - System Architecture & diagrams
+    - Data plane modes (SPI, QSPI, FMC)
+    - Register map (systsem, link, GPIO, data engine)
+    - I2C protocol draft
+    - Drafted Code
+    - FPGA module hierarchy
+
+### Pending
+[ ] STM32 peripheral mapping 
+[ ] FPGA pin out mapping/specs
+[ ] Verify I2C channel selection
+
+
+
 
 
