@@ -43,28 +43,38 @@ module spi_slave(
             // CS inactive - just reset bit counter
             bit_cnt  <= 3'd0;
         end else begin
-            // CS active - process SPI
-            
-            // Sample on MOSI rising edge
+            // --- SPI Mode 1 Implementation ---
+            // Logic: Shift MISO on Rising, Sample MOSI on Falling
             if (sclk_rising) begin
+                // FIX - Don't shift on very first bit
+                // CPHA, 1st bit must be valid before 1st clock
+                // we load 'shift_out' at CS_falling (burst reload)
+                // bit 7 already on wire. Shifting now loses MSB
+                if (bit_cnt != 3'd0) begin
+                    shift_out   <= {shift_out[6:0], 1'b0};
+                end
+            end
+            
+            // Sample MOSI on FALLING edge (stable data)
+            if (sclk_falling) begin
                 shift_in <= {shift_in[6:0], mosi_sync[1]};
                 bit_cnt  <= bit_cnt + 1;
                 
-                // Byte Complete?
+                // byte cplt?
                 if (bit_cnt == 3'd7) begin
-                    // save for next Tx and display
-                    last_byte       <= {shift_in[6:0], mosi_sync[1]};
-                    data_received   <= {shift_in[6:0], mosi_sync[1]};
-                end               
-            end
-            
-            // Shift out MISO on falling edge
-            if (sclk_falling) begin
-                shift_out <= {shift_out[6:0], 1'b0};
+                    // save Rx 
+                    last_byte     <= {shift_in[6:0], mosi_sync[1]};
+                    data_received <= {shift_in[6:0], mosi_sync[1]};
+                    
+                    // FIX - burst mode issue, reload immediately w/ new byte?
+                    // ensures new MSB is ready on the wire
+                    // Next rising edge of next byte
+                    shift_out     <= {shift_in[6:0], mosi_sync[1]};
+                end
             end
         end
     end
-    
+
     // MISO output - directly from shift reg. MSB
     // drive when CS active, high-Z when inactive
     assign miso = cs_active ? shift_out[7] : 1'bz;
