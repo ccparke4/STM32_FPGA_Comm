@@ -30,10 +30,11 @@ This project is currently in active development.
     - [x] Establish SPI Master (STM32) and Slave (FPGA) link.
     - [x] Implement CDC syncronization for stable data latching.
     - [x] Verify basic echo protocol.
+    - [x] Stress test basic echo protocol.
 - [ ] __Phase 2: High-Performance I/O__
     - [ ] Implement DMA (Direct Memory Access) on STM32 to offload CPU.
     - [ ] Increase SPI Clock frequency
-    - [ ] Perform long-duration stress testing to measure Bit Error Rate.
+    - [x] Perform long-duration stress testing to measure Bit Error Rate.
     - [ ] Evaluate Quad-SPI Implementation to widen bus from 1'b to 4b to increase bandwidth.
     - [ ] Investigate the implementing/designing a split architecture. Seperating Control vs Data via adding I2C to handle "Out-of-Band" management.
 - [ ] __Phase 3: Application Layer (Visual Processing)__

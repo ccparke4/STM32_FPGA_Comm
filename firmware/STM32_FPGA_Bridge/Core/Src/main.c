@@ -310,13 +310,13 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin : SPI_CS_Pin */
   GPIO_InitStruct.Pin = SPI_CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
   HAL_GPIO_Init(SPI_CS_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
@@ -364,36 +364,65 @@ void StartDefaultTask(void *argument)
 /* USER CODE END Header_StartSpiTask */
 void StartSpiTask(void *argument) {
 	/* USER CODE BEGIN StartSpiTask */
-	// 1. define a test buffer
-	uint8_t tx_buffer[2];
-	uint8_t rx_buffer[2];
+
+	// Stress test vars
+	uint8_t tx_byte = 0;			// Rolling counter (0-255)
+	uint8_t rx_byte = 0;			// Rx'd byte
+	uint8_t expected_val = 0;   	// Verif. val
+	uint32_t total_transfers = 0;	// Bit slip counter
+	uint32_t error_count = 0;
+
+	printf("Starting SPI Stress Test...\n");
 
 	/* Infinite loop */
 	for (;;) {
-		// 1. Prepare Packet: [VAl] [Dummy] x3
-		tx_buffer[0] = 0xAA;		// setup
-		tx_buffer[1] = 0x55;		// Dummy
-
-
-		// 2. Chip Select Low
+		// 1. Chip Select Low
 		HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
 
-		// 3. Transmit burst
-		// keeps clock running for 16 cycles w/o CS toggling
-		// mshould match TB behavior
-		if (HAL_SPI_TransmitReceive(&hspi4, tx_buffer, rx_buffer, 2, 100) == HAL_OK) {
-			// 4. CS high - end Tx
+		// 2. Tx/Rx 1 Byte
+		// use a small time out, as 1 byte at 3.9MHz takes ~2us
+		if (HAL_SPI_TransmitReceive(&hspi4, &tx_byte, &rx_byte, 1, 10) == HAL_OK) {
+			// 3. CS high
 			HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
 
-			// verify
-			printf("Sent: [0x%02X, 0x%02X] | Recv: [0x%02X, 0x%02X]\n", tx_buffer[0], tx_buffer[1], rx_buffer[0], rx_buffer[1]);
+			// 4. Verification logic
+			// FPGA pipeline - Rx prev byte sent
+			// So Rx=(Tx -1)
+			if (total_transfers > 0) {	// skip 1st byte (pipeline filling)
+				expected_val = tx_byte - 1;
+				// uint8_t handles overflow
+
+				if (rx_byte != expected_val) {
+					error_count++;
+					printf("FAIL: Tx: %02X, Rx: %02X\n", tx_byte, rx_byte);
+				}
+
+			}
+			// 5. update counters
+			tx_byte++;
+			total_transfers++;
+
 
 		} else {
 			// Error handling if SPI fails
 			HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
         	printf("SPI Error\n");
+        	osDelay(5);
 		}
-		osDelay(100);
+
+		// 5. Periodic report
+		// print every 50kB, ~0.1s
+		if ((total_transfers % 5000) == 0) {
+			printf("Transfers: %lu | Errors: %lu | Last Rx: 0x%02X\n",
+			                   total_transfers, error_count, rx_byte);
+
+			// dont starve processor
+			osDelay(1);
+
+		}
+
+		// 6. update counters
+
 
 	}
 
