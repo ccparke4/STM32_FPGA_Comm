@@ -29,4 +29,4 @@ By isolating control traffic, the data plane becomes a pure streaming interface 
 
 ### 2.1 Block Diagram
 
-![System Block Diagram v0.1](Visualization/SysArchitecture_v01.png)
+![System Block Diagram v0.1](Visualization/SysArchitecture_v0.1.png)
