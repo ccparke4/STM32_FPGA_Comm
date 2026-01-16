@@ -304,12 +304,50 @@ __4. Configurable addressing__ - I2C slave address selectable via ?/? pins (stil
     - Drafted Code
     - FPGA module hierarchy
 
-### Pending
-[ ] STM32 peripheral mapping 
-[ ] FPGA pin out mapping/specs
-[ ] Verify I2C channel selection
+### __Next Steps:__ (COMPLETED 1/15/26)
+- [x] STM32 peripheral mapping 
+- [x] FPGA pin out mapping/specs
+- [x] Verify I2C channel selection
 
+## Entry 7: I2C Control Plane - HDL (Day 1/?)
+__Date:__ 01/15/2026
 
+## __Objectives__
+- Implement I2C slave module for FPGA
+- Create register file per adaptive_link_spec
+- Build testbench for verification
+
+### __Work Completed__
+
+**STM32 Configuration:**
+- I2C1 enabled (PB6/SCL, PB7/SDA)
+- Fast Mode 400kHz
+- Rise/Fall time: 100ns/10ns
+
+**FPGA Modules Created/Planned:**
+| Module | Description | Status |
+|--------|-------------|--------|
+| `i2c_slave.sv` | I2C slave FSM with CDC, 7-bit addressing, auto-increment | incomplete |
+| `register_file.sv` | Register bank (System 0x00, Link 0x10, GPIO 0x20) | attempt #1 |
+| `tb_i2c_slave.sv` | Directed testbench with I2C transaction tasks | - |
+| `top_new.sv` | Updated top integrating I2C + existing SPI | - |
+| `basys3_constraints.xdc` | Added I2C on JB Pmod (JB1=SCL, JB2=SDA) | - |
+
+**Pin Mapping Finalized:**
+| Bus | Signal | STM32 | FPGA |
+|-----|--------|-------|------|
+| I2C | SCL | PB6 | JB1 (A14) |
+| I2C | SDA | PB7 | JB2 (A16) |
+
+### __Next Steps__
+- [ ] Finish remaining files
+    - [ ] `i2c_slave.sv`
+    - [ ] `tb_i2c_slave.sv`
+    - [ ] `basys3_constraints.xdc`
+- [ ] Run simulation
+- [ ] Synthesize and verify timing
+- [ ] Hardware test with pull-ups
+- [ ] STM32 driver functions
 
 
 
