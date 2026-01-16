@@ -312,7 +312,7 @@ __4. Configurable addressing__ - I2C slave address selectable via ?/? pins (stil
 ## Entry 7: I2C Control Plane - HDL (Day 1/?)
 __Date:__ 01/15/2026
 
-## __Objectives__
+### __Objectives__
 - Implement I2C slave module for FPGA
 - Create register file per adaptive_link_spec
 - Build testbench for verification
@@ -341,13 +341,69 @@ __Date:__ 01/15/2026
 
 ### __Next Steps__
 - [ ] Finish remaining files
-    - [ ] `i2c_slave.sv`
+    - [x] `i2c_slave.sv`
     - [ ] `tb_i2c_slave.sv`
-    - [ ] `basys3_constraints.xdc`
+    - [x] `basys3_constraints.xdc`
 - [ ] Run simulation
 - [ ] Synthesize and verify timing
 - [ ] Hardware test with pull-ups
 - [ ] STM32 driver functions
 
+## Entry 8: I2C Control Plane - Integration & Synthesis
+__Date:__ 01/16/2026
 
+### __Objectives:__
+- Complete I2C slave state machine
+- Integrate I2C + SPI into top module 
+- Generate bitstream
+
+### _Work Completed__
+__I2C Slave FSM (`i2c_slave.sv`):__
+- Implemented 9-state FSM: IDLE → GET_ADDR → ACK_ADDR → GET_REG → ACK_REG → WRITE_DATA → ACK_WRITE → READ_DATA → WAIT_ACK
+- Features: 7-bit addressing, auto-increment, START/STOP detection
+- CDC: 3-stage synchronizers on SCL/SDA (same approach as SPI)
+
+__Top Module Integration (`top.sv`):__
+- Integrated I2C slave + register file + existing SPI slave
+- Added reset synchronizer
+- I2C tristate handling for bidirectional SDA
+
+### __Issue Encountered: Port Name Mismatch__
+Bitstream generation failed with:
+```
+[DRC NSTD-1] Unspecified I/O Standard: Problem ports: JA3
+[DRC UCIO-1] Unconstrained Logical Port: Problem ports: JA3
+```
+
+__Root Cause:__ 
+- Ports declared as `JA1`, `JA2`, `JA3`, `JA4`
+- SPI instantiation referenced `spi_cs`, `spi_mosi`, `spi_miso`, `spi_sclk` (undefined signals)
+- Constraints file expected `spi_*` names
+
+__Fix:__ 
+Adopted functional naming convention (industry standard):
+| Port | Physical Pin | Constraint |
+|------|--------------|------------|
+| `spi_cs` | JA1 (J1) | done |
+| `spi_mosi` | JA2 (L2) | done |
+| `spi_miso` | JA3 (J2) | done |
+| `spi_sclk` | JA4 (G2) | done |
+
+__Notes:__ RTL describes function; constraints handle physical mapping.
+
+### __Current Status__
+| Task | Status |
+|------|--------|
+| `i2c_slave.sv` | Complete |
+| `register_file.sv` | Complete |
+| `top.sv` | Complete (fixed) |
+| `basys3_Master.xdc` | Complete |
+| Synthesis | In Progress |
+| Testbench | Pending |
+
+### __Next Steps__
+- [ ] Verify bitstream generation completes
+- [ ] Create `tb_i2c_slave.sv` testbench
+- [ ] Hardware test with 4.7kΩ pull-ups on I2C
+- [ ] STM32 I2C driver (`fpga_read_reg()` / `fpga_write_reg()`)
 
