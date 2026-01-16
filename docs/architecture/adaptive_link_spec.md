@@ -106,7 +106,7 @@ HAL_I2C_Mem_Read(&hi2c1, FPGA_ADDR, 0x10, I@C_MEMADD_SIZE_8BIT, buf, 4, 100);   
 | 0x40-0xFF | Reserved | Expansion |
 
 ### 4.2 System Registers (0x00-0x0F)
-| Addr | Name | R/W | Reset | Description |
+| Addr | Name | R/W | Reset | Description |S
 |------|------|-----|-------|-------------|
 | 0x00 | DEVICE_ID | R | 0xA7 | Device identifier |
 | 0x01 | VERSION_MAJ | R | 0x01 | Firmware major version |
@@ -140,10 +140,10 @@ bit 7:6 -   Max bus width
             00 = 1'b -> SPI
             01 = 2'b -> DUAL SPI
             10 = 4'b -> QSPI
-            11 = 8'b -> QSPI
+            11 = 8'b -> FMI
 
 bit 5:4 -   Max clock tier
-            00 = 10MHz
+            00 = 10MH
             01 = 25MHz
             10 = 50MHz
             11 = 100MHz
