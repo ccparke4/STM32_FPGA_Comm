@@ -29,7 +29,7 @@ module register_file(
     input  logic [7:0]  reg_wdata,
     input  logic        reg_wr,
     output logic[7:0]   reg_rdata,
-    input  logic        reg_read,
+    input  logic        reg_rd,
     
     // HW interfaces
     output logic [7:0]  led_out,
