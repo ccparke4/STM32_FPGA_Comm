@@ -46,8 +46,8 @@ module tb_i2c_slave();
 
     // I2C Bus model -------------------------------------------------------
     // open drain w/ PU
-    assign sda_bus  = (sda_master === 1'b) ? 1'b0 :
-                    (sda_slave_oe && !sda_slave) ? 1'b0 : 1'b1;
+    assign sda_bus  = (sda_master === 1'b0) ? 1'b0 :
+                      (sda_slave_oe && !sda_slave) ? 1'b0 : 1'b1;
 
     // DUI Inst. -----------------------------------------------------------
     logic [7:0]     reg_addr;
@@ -137,7 +137,7 @@ module tb_i2c_slave();
     endtask
 
     // Read one byte, send ACK or NACK
-    task i2c_read_byte(output [7:0] data, input logic send_ack)
+    task i2c_read_byte(output [7:0] data, input logic send_ack);
         integer i;
         data        =   8'h00;
         sda_master  <= 1'bz;    // Release SDA for slave to drive
@@ -163,7 +163,7 @@ module tb_i2c_slave();
 
     // High-level i2c comm tasks -----------------------------------------------
     // write single reg
-    task i2c_reg_read(input [7:0] reg_address, output [7:0] data);
+    task i2c_reg_write(input [7:0] reg_address, input [7:0] data);
         logic ack;
 
         i2c_start();
@@ -180,7 +180,7 @@ module tb_i2c_slave();
     endtask
 
     // Read single reg
-    task i2c_reg_read(input [7:0] reg_address, output [7:0] data)
+    task i2c_reg_read(input [7:0] reg_address, output [7:0] data);
         logic ack;
 
         i2c_start();
@@ -201,7 +201,7 @@ module tb_i2c_slave();
     endtask
 
     // Helpers ------------------------------------------------------------------------
-    task check_value(input [7:0] expected, input [7:0] actual, input string name) 
+    task check_value(input [7:0] expected, input [7:0] actual, input string name);
         if (actual === expected) begin
             $display("  PASS: %s = 0x%02X", name, actual);
             test_pass++;
