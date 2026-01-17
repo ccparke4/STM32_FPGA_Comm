@@ -381,7 +381,7 @@ __Root Cause:__
 - Constraints file expected `spi_*` names
 
 __Fix:__ 
-Adopted functional naming convention (industry standard):
+Adopted functional naming convention (industry standard): <br>
 | Port | Physical Pin | Constraint |
 |------|--------------|------------|
 | `spi_cs` | JA1 (J1) | done |
@@ -389,7 +389,7 @@ Adopted functional naming convention (industry standard):
 | `spi_miso` | JA3 (J2) | done |
 | `spi_sclk` | JA4 (G2) | done |
 
-__Notes:__ RTL describes function; constraints handle physical mapping.
+__Notes:__ RTL describes function; constraints handle physical mapping. <br>
 
 ### __Current Status__
 | Task | Status |
@@ -402,8 +402,44 @@ __Notes:__ RTL describes function; constraints handle physical mapping.
 | Testbench | Pending |
 
 ### __Next Steps__
-- [ ] Verify bitstream generation completes
-- [ ] Create `tb_i2c_slave.sv` testbench
-- [ ] Hardware test with 4.7kΩ pull-ups on I2C
-- [ ] STM32 I2C driver (`fpga_read_reg()` / `fpga_write_reg()`)
+- [x] Verify bitstream generation completes
+- [x] Create `tb_i2c_slave.sv` testbench
+- [ ] Hardware test with 4.7kΩ pull-ups on I2C - PUSHED BACK (1/18-1/19)
+- [x] STM32 I2C driver (`fpga_read_reg()` / `fpga_write_reg()`)
+
+## Entry 8: I2C Verification Plan & System Documentation
+__Date:__ 01/17/2026 <br>
+
+### __Objectives__
+- Finalize simulation environment & files for i2c slave
+- Formalize State Machine behavior and Documentation
+- Plan integration testing strategy (I2C Independent & I2C + SPI concurrency)
+
+### __Work Completed__
+1. __Simulation Environment ([tb_i2c_slave.sv](fpga/sim/tb_i2c_slave.sv))__ Created a self checking SystemVerilog test bench to validate the I2C physical layer and Register file integration.
+    - __Bus Modeling:__ Simulated `sda_bus` (pull-up) to handle birdirectional drive.
+    - __Test Vector Implementation:__
+        - __Target:__ Implemented checks for `DEVICE_ID` (0xA7), ACK/NACK handling, and RF
+        - __I/O Control:__ Addde test cases for LED output and Switch input
+
+2. __State Machine Documentation ([state_machines.md](architecture/state_machines.md))__ documented the control logic into a single document tracking different state machines and pseudo-code.
+    - __I2C Slave:__ Define as 9 State Mealy Machine
+    - __SPI Slave:__ Mostly pseudo-code, counter approach, moore-esque model
+
+3. __Integration Strategy:__
+    - Disabled [tb_spi_slave.sv](fpga/sim/tb_spi_slave.sv) in Vivado to isolate I2C verification.
+    - Defined validation hierarchy: __Unit Testing__ (independent SPI done, Independent I2C TBD) -> __Integration Testing__ (Test concurrency of systems).
+
+### __Results__
+- __Sim Status:__ TBD. Testbench code written and compiles; execution ready...
+- __Architecture:__ Block diagrams for FSM and insight into (previously offline) design choices and approach
+
+### __Next Steps__
+- [ ] __Execute Unit Test:__ Verify output and waveforms
+- [ ] __Integration Planning:__ Draft up combined tb (`tb_system_top`) to simulate both SPI and I2C at the same time.
+- [ ] __Integration Testing:__ Simulate `tb_system_top` and validate.
+    - Ensure that high-speed SPI does not corrupt I2C (vice versa)
+- [ ] __Firmware Integration:__ Return to working with the STM32H7: developing c code, real world tests, 'on-the-fly' peripheral communication config.
+
+
 
