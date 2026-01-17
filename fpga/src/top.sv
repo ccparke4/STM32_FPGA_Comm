@@ -5,11 +5,13 @@ module top(
     input  logic        i2c_scl,    // JB1 - i2c clock
     inout  wire         i2c_sda,    // JB2 - i2c data (bi-dir)
     // SPI - data plane
-    input  logic        JA1, //CS
-    input  logic        JA2, // MOSI
-    input  logic        JA4, // SCLK
-    output logic        JA3, // MISO
+    input  logic        spi_cs,     // JA1 - Chip sel
+    input  logic        spi_mosi,   // JA2 - Master Out Slave In
+    input  logic        spi_miso,   // JA3 - Master In Slave Out
+    output logic        spi_sclk,   // JA4 - SPI clk
     // UI - gpio, leds, ...
+    
+    output logic [7:0]  led,
     input  logic [7:0]  sw,             // 8 switches
     output logic [6:0]  seg,
     output logic [3:0]  an

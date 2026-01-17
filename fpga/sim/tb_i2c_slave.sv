@@ -24,7 +24,8 @@ module tb_i2c_slave();
 
     // parameters ----------------------------------------------------------
     parameter   CLK_PERIOD = 10;        // 100 MHz sys clk
-    parameter   I2C_PERIOD = 2500;      // 450kHz i2c clock (2.5us period)
+    parameter   I2C_PERIOD = 2500;      // 400kHz i2c clock (2.5us period)
+    parameter   SLAVE_ADDR = 7'h50;
     // signals -------------------------------------------------------------
     logic       clk;
     logic       rst_n;
