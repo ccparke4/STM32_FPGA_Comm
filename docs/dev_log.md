@@ -61,13 +61,13 @@ assign sclk_falling = (sclk_sync[2:1] == 2'b10);
 ```
 
 #### 3. Protocol Design
-*Byte[0]: STM32 sends Counter -> FPGA receives
+* Byte[0]: STM32 sends Counter -> FPGA receives
 
-*Byte[1]: STM32 sends Dummy -> FPGA echos counter
+* Byte[1]: STM32 sends Dummy -> FPGA echos counter
 
-*Byte[2]: STM32 sends Dummy -> FPGA sends 'H' (0x48)
+* Byte[2]: STM32 sends Dummy -> FPGA sends 'H' (0x48)
 
-*Byte[3]: STM32 sends Dummy -> FPGA sends 'i' (0x69)
+* Byte[3]: STM32 sends Dummy -> FPGA sends 'i' (0x69)
 
 #### 4. Visual Output (7-Segment Display)
 To verify data ingress physically, the FPGA parses the received byte and maps it to the on-board 7-segment display.
@@ -340,14 +340,13 @@ __Date:__ 01/15/2026
 | I2C | SDA | PB7 | JB2 (A16) |
 
 ### __Next Steps__
-- [ ] Finish remaining files
+- [x] Finish remaining files
     - [x] `i2c_slave.sv`
-    - [ ] `tb_i2c_slave.sv`
+    - [x] `tb_i2c_slave.sv`
     - [x] `basys3_constraints.xdc`
-- [ ] Run simulation
-- [ ] Synthesize and verify timing
-- [ ] Hardware test with pull-ups
-- [ ] STM32 driver functions
+- [x] Run simulation
+- [x] Synthesize and verify timing
+- [ ] Hardware test with pull-ups (PUSHED BACK (1/16))
 
 ## Entry 8: I2C Control Plane - Integration & Synthesis
 __Date:__ 01/16/2026
