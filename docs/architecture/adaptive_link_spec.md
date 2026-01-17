@@ -106,7 +106,7 @@ HAL_I2C_Mem_Read(&hi2c1, FPGA_ADDR, 0x10, I@C_MEMADD_SIZE_8BIT, buf, 4, 100);   
 | 0x40-0xFF | Reserved | Expansion |
 
 ### 4.2 System Registers (0x00-0x0F)
-| Addr | Name | R/W | Reset | Description |S
+| Addr | Name | R/W | Reset | Description |
 |------|------|-----|-------|-------------|
 | 0x00 | DEVICE_ID | R | 0xA7 | Device identifier |
 | 0x01 | VERSION_MAJ | R | 0x01 | Firmware major version |
@@ -118,11 +118,11 @@ HAL_I2C_Mem_Read(&hi2c1, FPGA_ADDR, 0x10, I@C_MEMADD_SIZE_8BIT, buf, 4, 100);   
 | 0x07-0x0F | RESERVED | - | 0x00 | - |
 
 #### SYS_STATUS (0x03):
-bit 7   - I2C ready
-bit 6   - Data plane ready
-bit 5   - Error flag (sticky, must write 1 to clear)
-bit 4   - IRQ pending
-bit 3:0 - RESERVED
+bit 7   - I2C ready <br>
+bit 6   - Data plane ready <br>
+bit 5   - Error flag (sticky, must write 1 to clear) <br>
+bit 4   - IRQ pending <br>
+bit 3:0 - RESERVED <br>
 
 ### 4.3 Link Control Registers (0x10-0x1F)
 | Addr | Name | R/W | Reset | Description |
@@ -136,29 +136,29 @@ bit 3:0 - RESERVED
 | 0x17-0x1F | RESERVED | - | 0x00 | - |
 
 #### LINK_CAPS (0x10)
-bit 7:6 -   Max bus width
-            00 = 1'b -> SPI
-            01 = 2'b -> DUAL SPI
-            10 = 4'b -> QSPI
-            11 = 8'b -> FMI
+bit 7:6 -   Max bus width <br>
+            00 = 1'b -> SPI  <br>
+            01 = 2'b -> DUAL SPI <br>
+            10 = 4'b -> QSPI <br>
+            11 = 8'b -> FMI <br>
 
-bit 5:4 -   Max clock tier
-            00 = 10MH
-            01 = 25MHz
-            10 = 50MHz
-            11 = 100MHz
+bit 5:4 -   Max clock tier <br>
+            00 = 10MH <br>
+            01 = 25MHz <br>
+            10 = 50MHz <br>
+            11 = 100MHz <br>
 
-bit 3   -   FMC interface available
-bit 2   -   DMA streaming supported
-bit 1   -   Hardware CRC available
-bit 0   -   IRQ output available
+bit 3   -   FMC interface available <br>
+bit 2   -   DMA streaming supported <br>
+bit 1   -   Hardware CRC available <br>
+bit 0   -   IRQ output available <br>
 
 #### DATA_MODE (0x11)
-bit 7   -   Enable data plane
-bit 6   -   Loopback mode (testing/debug)
-bit 5:4 -   RESERVED
-bit 3:2 -   Bus width (00=1, 01=2, 10=4, 11=8)
-bit 1:0 -   Mode select (00=SPI, 01=SPI-HI, 10=QSPI, 11=FMC)
+bit 7   -   Enable data plane <br>
+bit 6   -   Loopback mode (testing/debug) <br>
+bit 5:4 -   RESERVED <br>
+bit 3:2 -   Bus width (00=1, 01=2, 10=4, 11=8) <br>
+bit 1:0 -   Mode select (00=SPI, 01=SPI-HI, 10=QSPI, 11=FMC) <br>
 
 ### 4.4 GPIO Registers (0x20-0x2F)
 | Addr | Name | R/W | Reset | Description |
@@ -179,14 +179,14 @@ bit 1:0 -   Mode select (00=SPI, 01=SPI-HI, 10=QSPI, 11=FMC)
 | 0x33 | FIFO_CTRL | R/W | 0x00 | FIFO control (flush, enable) |
 
 #### FIFO_STATUS (0x30)
-bit 7   - TX FIFO full
-bit 6   - TX FIFO empty
-bit 5   - TX FIFO half
-bit 4   - RX FIFO full
-bit 3   - RX FIFO empty
-bit 2   - RX FIFO half
-bit 1   - Overflow error
-bit 0   - underflow error
+bit 7   - TX FIFO full  <br>
+bit 6   - TX FIFO empty <br>
+bit 5   - TX FIFO half <br>
+bit 4   - RX FIFO full <br>
+bit 3   - RX FIFO empty <br>
+bit 2   - RX FIFO half <br>
+bit 1   - Overflow error <br>
+bit 0   - underflow error <br>
 
 ## 5. Initialization & Mode Configuration
 ### 5.1 Boot Sequence
@@ -194,7 +194,7 @@ bit 0   - underflow error
 
 ### 5.2 STM32 Initialization Code [DRAFT]
 ```c
-#define FPGA_I2C_ADDR   0x50
+#define FPGA_I2C_ADDR   0x50 <br>
 
 typedef struct {
     uint8_t device_id;
