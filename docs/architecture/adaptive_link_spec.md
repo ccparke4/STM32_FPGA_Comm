@@ -190,7 +190,7 @@ bit 0   - underflow error <br>
 
 ## 5. Initialization & Mode Configuration
 ### 5.1 Boot Sequence
-![Boot diagram v0.1](Visualtization/bootdiagram.png)
+![Boot diagram v0.1](Visualization/bootdiagram.png)
 
 ### 5.2 STM32 Initialization Code [DRAFT]
 ```c
