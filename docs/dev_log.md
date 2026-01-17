@@ -290,10 +290,10 @@ Drafted [adaptive_link_spec.md](architecture/adaptive_link_spec.md) (v0.1) defin
 | Data | SPI/QSPI/FMC | Raw streaming |
 
 ### __Design Considerations:__
-__1. I2C for control plane__ - standard register access, no custom framing, independent from data path (Careful implementation needed).
-__2. Data plane simplicity__ - Raw bytes, avoid protocol overhead
-__3. Capability aiscovery__ - LINK_CAPS register for runtime negotiation
-__4. Configurable addressing__ - I2C slave address selectable via ?/? pins (still need to verify this...) (0x50-0x53).
+1. __I2C for control plane__ - standard register access, no custom framing, independent from data path (Careful implementation needed). <br>
+2. __Data plane simplicity__ - Raw bytes, avoid protocol overhead   <br>
+3. __Capability aiscovery__ - LINK_CAPS register for runtime negotiation <br>
+4. __Configurable addressing__ - I2C slave address selectable via ?/? pins (still need to verify this...) (0x50-0x53). <br>
 
 ### __Documentation Created__
 - [adaptive_link_spec.md](architecture/adaptive_link_spec.md)
