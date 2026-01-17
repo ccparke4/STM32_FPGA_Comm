@@ -99,6 +99,7 @@ HAL_I2C_Mem_Read(&hi2c1, FPGA_ADDR, 0x10, I@C_MEMADD_SIZE_8BIT, buf, 4, 100);   
 ## 4. Register Map
 ### 4.1 Register Overview
 | Range | Block | Description |
+|-------|-------|-------------|
 | 0x00-0x0F | System | ID, version, status, test |
 | 0x10-0x1F | Link Control | Data plane mode, capabilities |
 | 0x20-0x2F | GPIO | LED, switch, user I/O |
