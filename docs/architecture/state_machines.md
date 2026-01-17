@@ -53,12 +53,12 @@ __Author:__ Trey Parker
 | `ACK_ADDR` | - | 1 | 0 | 0 | `rw_bit` & `scl_falling` |
 | `ACK_REG` | - | 1 | 0 | 0 | 0 |
 | `ACK_WRITE` | - | 1 | 0 | `scl_falling` | 0 |
-| `READ_DATA` | - | 1 | `shift_reg[7]` | 0 |
+| `READ_DATA` | - | 1 | `shift_reg[7]` | 0 | 0 |
 | `WAIT_ACK` | `sda==0` & `scl_rising` | 0 | 1 | 0 | 1 |
 | _default_ | - | 0 | 1 | 0 | 0 |
 
 ### 1.5 State Diagram
-![I2C Mealy FSM](architecture/FSM/i2c_mealy.png)
+![I2C Mealy FSM](FSM/i2c_mealy.png)
 
 ## 2. SPI Slave Controller
 ### 2.1 Overview
