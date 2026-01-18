@@ -272,5 +272,8 @@ assign reg_wr    = (state == ACK_WRITE) && scl_falling;
 assign reg_rd = ((state == ACK_ADDR) && rw_bit && scl_falling) ||
                 ((state == WAIT_ACK) && !sda && scl_rising);
     
-    
+// DEBUG ==========================================================================
+always @(state) begin
+    $display("[%0t] FSM STATE CHANGE: %s (BitCnt: %d)", $time, state.name, bit_cnt);
+end
 endmodule
