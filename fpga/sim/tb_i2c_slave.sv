@@ -168,7 +168,7 @@ module tb_i2c_slave();
 
         i2c_start();
         i2c_write_byte({SLAVE_ADDR, 1'b0}, ack);        // addr + wr
-        if (!ack) $$display("   ERROR: No ACK on address");
+        if (!ack) $display("   ERROR: No ACK on address");
 
         i2c_write_byte(reg_address, ack);               // register address
         if (!ack) $display("    ERROR: No ACK on reg address");
@@ -231,7 +231,7 @@ module tb_i2c_slave();
         #100;
 
         // TEST 1: Rd DEVICE_ID (expect 0xA7)
-        $$display("\n--- Test 1: Read DEVICE_ID ---");
+        $display("\n--- Test 1: Read DEVICE_ID ---");
         i2c_reg_read(8'h00, read_data);
         check_value(8'hA7, read_data, "DEVICE_ID");
 
