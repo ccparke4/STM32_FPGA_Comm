@@ -23,6 +23,18 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <string.h>
+#include "app_config.h"
+
+#if ENABLE_I2C_SUBSYSTEM
+#include "fpga_ctrl_task.h"
+#endif
+
+#if ENABLE_SPI_SUBSYSTEM
+#include "fpga_spi_task.h"
+#endif
+
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,13 +67,6 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-/* Definitions for spiTask */
-osThreadId_t spiTaskHandle;
-const osThreadAttr_t spiTask_attributes = {
-  .name = "spiTask",
-  .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
 /* Definitions for debugTask */
 osThreadId_t debugTaskHandle;
 const osThreadAttr_t debugTask_attributes = {
@@ -70,6 +75,24 @@ const osThreadAttr_t debugTask_attributes = {
   .priority = (osPriority_t) osPriorityBelowNormal,
 };
 /* USER CODE BEGIN PV */
+#if ENABLE_I2C_SUBSYSTEM
+osThreadId_t fpgaCtrlTaskHandle;
+const osThreadAttr_t fpgaCtrlTask_attributes = {
+		.name = "fpgaCtrlTask",
+		.stack_size = STACK_SIZE_I2C,
+		.priority = (osPriority_t) osPriorityNormal
+};
+#endif
+
+#if ENABLE_SPI_SUBSYSTEM
+osThreadId_t fpgaSpiTaskHandle;
+const osThreadAttr_t fpgaSpiTask_attributes = {
+		.name = "fpgaSpiTask",
+		.stack_size = STACK_SIZE_SPI,
+		.priority = (osPriority_t) osPriorityNormal
+};
+#endif
+
 extern volatile uint8_t spi_dma_complete;
 
 // out of stack, put in SRAM (global); align for cache
@@ -85,11 +108,11 @@ static void MX_DMA_Init(void);
 static void MX_SPI4_Init(void);
 static void MX_I2C1_Init(void);
 void StartDefaultTask(void *argument);
-void StartSpiTask(void *argument);
 void StartDebugTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-
+static void print_system_info(void);
+static const char* get_test_mode_string(app_test_mode_t mode);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -101,6 +124,18 @@ int _write(int file, char *ptr, int len) {
 		ITM_SendChar(*ptr++);
 	}
 	return len;
+}
+
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
+	if (hspi->Instance == SPI4) {
+		spi_dma_complete = 1;		// completion even on error
+	}
+}
+
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi) {
+	if (hspi->Instance == SPI4) {
+		spi_dma_complete = 1;  /* Signal completion even on error */
+    }
 }
 /* USER CODE END 0 */
 
@@ -148,7 +183,7 @@ int main(void)
   MX_SPI4_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-
+  print_system_info();
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -174,14 +209,25 @@ int main(void)
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
-  /* creation of spiTask */
-  spiTaskHandle = osThreadNew(StartSpiTask, NULL, &spiTask_attributes);
-
   /* creation of debugTask */
   debugTaskHandle = osThreadNew(StartDebugTask, NULL, &debugTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  /* conditionally create tasks based on test mode */
+#if ENABLE_I2C_SUBSYSTEM
+  fpgaCtrlTaskHandle = osThreadNew(StartFpgaCtrlTask, NULL, &fpgaCtrlTask_attributes);
+  DBG_PRINT("[MAIN] Created FPGA Control (I2C) Task\n");
+#else
+  DBG_PRINT("[MAIN] I2C Subsystem DISABLED\n");
+#endif
+
+#if ENABLE_SPI_SUBSYSTEM
+  fpgaSpiTaskHandle = osThreadNew(StartFpgaSpitask, NULL, &fpgaSpiTask_attributes);
+  DBG_PRINT("[MAIN] Created FPGA SPI (Data Plane) Task\n");
+#else
+  DBG_PRINT("[MAIN] SPI Subsystem DISABLED\n");
+#endif
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -440,102 +486,6 @@ void StartDefaultTask(void *argument)
 	  osDelay(1000);
   }
   /* USER CODE END 5 */
-}
-
-/* USER CODE BEGIN Header_StartSpiTask */
-/**
-* @brief Function implementing the spiTask thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartSpiTask */
-void StartSpiTask(void *argument)
-{
-  /* USER CODE BEGIN StartSpiTask */
-	uint32_t transfer_count = 0;
-	uint32_t error_count = 0;
-	spi_dma_complete = 0;
-
-	// location of DMA buffs
-
-	printf("Tx Buffer Addr: %p\n", tx_buffer);
-	printf("Rx Buffer Addr: %p\n", rx_buffer);
-
-	// clear buffer to 0xFF for debug
-	memset(rx_buffer, 0x00, 64);
-
-
-	// initial Tx pattrn
-	for (int i = 0; i < 64; i++) {
-		tx_buffer[i] = i;
-	}
-
-	printf("Starting DMA SPI Test...\n");
-
-	/* Infinite loop */
-	for (;;) {
-
-		// reset DMA flag before tx
-		spi_dma_complete = 0;
-
-		// 1. CLEAN: Flush CPU data (tx_buffer) from Cache -> Physical RAM so DMA can see it
-		SCB_CleanDCache_by_Addr((uint32_t*) tx_buffer, 64);
-
-		// 2. INVALIDATE: Scrub the Rx area so CPU is forced to re-read it later
-		SCB_InvalidateDCache_by_Addr((uint32_t*) rx_buffer, 64);
-
-		//  Chip Select Low
-		HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
-
-		//  Tx/Rx 1 Byte
-		// non-blocking, wait for completion
-		if(HAL_SPI_TransmitReceive_DMA(&hspi4, tx_buffer, rx_buffer, 64) != HAL_OK) {
-			printf("DMA SPI Error!\n");
-			HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
-			osDelay(10);
-			continue;
-		}
-
-		// wait for callback
-		while (!spi_dma_complete) {
-			osDelay(1);
-		}
-
-		// CS high
-		HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
-
-		// 3. INVALIDATE AGAIN: DMA just wrote to RAM.
-		// We must flush the Cache's old idea of 'rx_buffer' so the CPU reads the new data.
-		SCB_InvalidateDCache_by_Addr((uint32_t*) rx_buffer, 64);
-
-		// verification: rx_buffer should equal tx_buffer[n-1] (pipe delay)
-		int exact_match = 0;
-		int left_shift = 0;
-		for (int i = 1; i < 64; i++){
-			if (rx_buffer[i] == tx_buffer[i-1]) exact_match++;
-			if (rx_buffer[i] == (uint8_t)(tx_buffer[i-1] << 1)) left_shift++;
-		}
-
-		transfer_count++;
-
-		//  Periodic report every 1000 txs
-		if ((transfer_count % 100) == 0) {
-		    printf("DMA: %lu | Match: %d | Shifted: %d | Rx[1]:%02X | Exp:%02X\n",
-		            transfer_count, exact_match, left_shift, rx_buffer[1], tx_buffer[0]);
-		}
-
-		// update test pattern
-		for (int i = 0; i < 64; i++) {
-			tx_buffer[i]++;
-		}
-
-		osDelay(10);
-
-	}
-
-
-
-  /* USER CODE END StartSpiTask */
 }
 
 /* USER CODE BEGIN Header_StartDebugTask */
