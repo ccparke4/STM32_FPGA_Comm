@@ -1,13 +1,13 @@
 /**
-2 * @file    app_config.h
-3 * @brief   Application Configuration and Test Mode Selection
-4 * @author  Trey Parker
-5 * @date    2026-01-18
-6 *
-7 * @details Central configuration for enabling/disabling subsystems
-8 *          and selecting test modes. Modify these defines to control
-9 *          what runs at startup.
-10 */
+* @file    app_config.h
+* @brief   Application Configuration and Test Mode Selection
+* @author  Trey Parker
+* @date    2026-01-18
+*
+* @details Central configuration for enabling/disabling subsystems
+*          and selecting test modes. Modify these defines to control
+*          what runs at startup.
+*/
 
 #ifndef APP_CONFIG_H
 #define APP_CONFIG_H
