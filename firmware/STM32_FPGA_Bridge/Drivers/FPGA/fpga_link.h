@@ -109,7 +109,7 @@ typedef struct {
     uint8_t version_min;            /**< Firmware minor version */
     uint8_t link_caps;              /**< Link capabilities */
     uint8_t sys_status;             /**< System status (if implemented) */
-} fpa_info_t;
+} fpga_info_t;
 
 /* Driver Handle Structure ================================================= */
 typedef struct {
