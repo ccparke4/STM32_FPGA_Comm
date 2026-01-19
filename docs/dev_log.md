@@ -434,11 +434,177 @@ __Date:__ 01/17/2026 <br>
 - __Architecture:__ Block diagrams for FSM and insight into (previously offline) design choices and approach
 
 ### __Next Steps__
-- [ ] __Execute Unit Test:__ Verify output and waveforms
+- [x] __Execute Unit Test:__ Verify output and waveforms
 - [ ] __Integration Planning:__ Draft up combined tb (`tb_system_top`) to simulate both SPI and I2C at the same time.
 - [ ] __Integration Testing:__ Simulate `tb_system_top` and validate.
     - Ensure that high-speed SPI does not corrupt I2C (vice versa)
-- [ ] __Firmware Integration:__ Return to working with the STM32H7: developing c code, real world tests, 'on-the-fly' peripheral communication config.
+- [x] __Firmware Integration:__ Return to working with the STM32H7: developing c code, real world tests, 'on-the-fly' peripheral communication config.
+
+## Entry 9: I2C Verification & Indpendent Simulation
+__Date:__ 01/18/2026 <br>
+
+### __Objectives__
+- Execute I2C testbench and identify failures <br>
+- Debug and fix timing issues   <br>
+- Planning for hardware verification between MCU & FPGA I2C <br>
+- Generate and verify bitstream <br>
+
+### __Files Create/Modified__
+| File/Dir | Action | Description |
+|----------|--------|-------------|
+| [tb_i2c_slave.sv](fpga/sim/tb_i2c_slave.sv) | Modified | Self checking testbench with I2C bus model |
+| [i2c_slave.sv](fpga/src/i2c_slave.sv) | Modified | Fixed cricical timing bugs revolving around ACK/NACK and Write |
+| [.../fpga/logs](fpga/logs/) | Created | Holds testbench output in form of logs |
+| [i2c_validation.md](protocols/I2C/i2c_validation.md) | Created | Details of validating and capabilities of I2C |
+
+### __Bugs Discovered & Fixed__
+
+#### __Bug #1: ACK Timing Race Condition__
+- __Symptom:__ Master saw NACK instead of ACK <br>
+- __Root Cause:__ State transition on same edge as ACK drive caused early release <br>
+- __Fix:__ Added `ack_scl_rose` flag to delay transition until after master samples <br>
+
+```systemverilog
+// i2c_slave.sv
+logic ack_scl_rose;     // Track when master samples ACK
+
+// In ACK states: wait for rising edge before allowing transition
+if (scl_rising && !ack_scl_rose) begin
+    ack_scl_rose <= 1'b1;
+end
+
+if (scl_falling && ack_scl_rose) begin
+    state        <= next_state;
+    ack_scl_rose <= 1'b0;
+end
+```
+
+#### __Bug #2: Register Address Capture Timing__
+- __Symptom:__ Read returned wrong register data <br>
+- __Root Cause:__ `reg_addr` updated after read strobe issued <br>
+- __Fix:__ Capture `reg_addr` at end of GET_REG state (bit 7) <br>
+
+```systemverilog
+// GET_REG case...
+if (bit_cnt == 3'd7) begin
+    reg_addr <= {shift_reg[6:0], sda_sync[2]};  // Capture HERE
+    state    <= ACK_REG;
+end
+```
+
+#### __Bug #3: `tx_data` Loading for Reads__
+- __Symptom:__ First byte read was 0x00 <br>
+- __Root Cause:__ `tx_data` loaded _after_ first bit shifted out <br>
+- __Fix:__ Load on ACK_ADDR fallingedge for read Tx's <br>
+
+``` systemverilog
+// In ACK_ADDR case, on transitionto READ_DATA
+if (rw_bit) begin
+    tx_data <= reg_rdata;   // load BEFORE entering READ_DATA
+    state   <= READ_DATA;
+end
+```
+
+### __Testbench Development__
+
+__Bus Model:__ Created open-drain SDA model with pull-up simulation: <br>
+
+```systemverilog
+// TB bus model
+always_comb begin
+    if (sda_master == 1'b0) begin
+        // Master driving low
+        sda_bus = 1'b0;
+    end
+    else if (sda_slave_oe && (sda_slave == 1'b0)) begin
+        // Slave driving low (OE high AND output is 0)
+        sda_bus = 1'b0;
+    end
+    else begin
+        // Nobody driving low - pull-up makes it high
+        sda_bus = 1'b1;
+    end
+end
+```
+
+__Test Coverage Implemented:__
+
+- Device enumberation (addr. match/mismatch) <br>
+- Read-only register access (DEVICE_ID, VERSION, LINK_CAPS) <br>
+- Read/Write register cycles (SCRATCH0, SCRATCH1, LED_OUT) <br>
+- Input register sampling (SW_IN)
+- Repeated START handling
+
+### __Next Steps__
+- [x] Run test suite <br>
+- [x] Verify all 12 tests pass <br>
+- [ ] HW verification with logic analyzer <br>
 
 
+## Entry 9: I2C Simulation Verification - PASS
+__Date:__ 01/19/2026 <br>
 
+### __Test Results: 12/12__ 
+| Test | Description | Result |
+|------|-------------|--------|
+| 0 | reg_addr capture | PASS |
+| 1 | Read DEVICE_ID (0x00) = 0xA7 | PASS |
+| 2 | Read VERSION_MAG (0x01) = 0x01 | PASS |
+| 3 | Read VERSION_MIN (0x02) = 0x00 | PASS |
+| 4 | SCRATCH0 Write 0x55 / Read 0x55 | PASS |
+| 5 | SCRATCH0 Write 0xAA / Read 0xAA | PASS |
+| 6 | SCRATCH1 Write 0x12 / Read 0x12 | PASS |
+| 7 | Read LINK_CAPS (0x10) = 0x15 | PASS |
+| 8 | LED_OUT Write 0xF0, HW verify | PASS |
+| 9 | LED_OUT readback = 0xF0 | PASS |
+| 10 | SW_IN Read = 0x3C | PASS |
+| 11 | Wrong address (0x27) -> NACK | PASS |
+
+### __Verification Evidence__
+See [i2c_independent_test.log](fpga/logs/i2c_independent_test.log) for complete log (Testbench only). <br>
+
+__ACK Timing(Fixed):__ <br>
+
+![ACK Timing](protocols/I2C/verification/imgs/sim_ack_timing.png)
+
+```log
+[22105000] ACK_OUTPUT: state=ACK_ADDR scl_edge=FALL sda_o=0 sda_oe=1 ack_scl_rose=0
+[23355000] ACK_ADDR: Saw 9th clock (ACK) rising edge
+[23950000] ACK DEBUG: state=ACK_ADDR, sda_slave_oe=1, sda_slave(sda_o)=0, sda_bus=0
+[24605000] ACK_OUTPUT: state=ACK_ADDR scl_edge=FALL sda_o=0 sda_oe=1 ack_scl_rose=1
+```
+Slave holds ACK through rising edge, tranistions only after `ack_scl_rose` set.
+
+__`tx_data` Loading (fixed):__ <br>
+
+![tx_data Loading](protocols/I2C/verification/imgs/sim_txdata_loading.png)
+
+```log
+[123325000] ACK DEBUG: state=ACK_ADDR, sda_slave_oe=1, sda_slave(sda_o)=0, sda_bus=0
+[123975000] ACK_ADDR: Loading tx_data=0xa7 for read
+[123975000] ACK_OUTPUT: state=ACK_ADDR scl_edge=FALL sda_o=0 sda_oe=1 ack_scl_rose=1
+[123975000] === STATE: READ_DATA (bit_cnt=0, ack_scl_rose=0, reg_addr=0x00, tx_data=0xa7) ===
+```
+
+DEVICE_ID loaded before READ_DATA state entered <br>
+
+__Simulation Metrics__ <br>
+| Metric | Value |
+|--------|-------|
+| Test Cases | 12 |
+| Pass Rate | 100% |
+| Simlation time | 1.27ms |
+| States Exercised | 9/9 |
+| Bugs Fixed | 3/3 |
+
+__Detailed Validation Report__ <br>
+
+See [i2c_validation.md](protocols/I2C/i2c_validation.md) for:
+- Complete bug analysis
+- Waveform analysis
+- Timing measurements
+
+### __Next Steps__
+- [ ] __Hardware Verification:__ Deploy bitstream, test with STM32 + logic analyzer. <br>
+- [ ] __Concurrent Testing:__ Verify I2C + SPI Operate without interference. <br>
+- [ ] __STM32 Driver:__ Complete `fpga_read_reg()` and `fpga_write_reg` API. <br>
