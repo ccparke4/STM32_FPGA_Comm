@@ -1,0 +1,163 @@
+=====================================
+  I2C Slave Testbench
+=====================================
+
+--- Test 0: Check reg_addr retrieval ---
+[23950000] i2c_write_byte: data=0xa0, sda_bus=0, ack=1
+[46450000] i2c_write_byte: data=0x00, sda_bus=0, ack=1
+[47700000] reg_addr at GET_REG phase: 0x00
+  PASS: reg_addr correctly captured BEFORE DEVICE_ID read
+
+--- Test 1: Read DEVICE_ID ---
+[75825000] i2c_write_byte: data=0xa0, sda_bus=0, ack=1
+[98325000] i2c_write_byte: data=0x00, sda_bus=0, ack=1
+[123325000] i2c_write_byte: data=0xa1, sda_bus=0, ack=1
+[125825000] i2c_read_byte: bit[7]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[128325000] i2c_read_byte: bit[6]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[130825000] i2c_read_byte: bit[5]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[133325000] i2c_read_byte: bit[4]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[135825000] i2c_read_byte: bit[3]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[138325000] i2c_read_byte: bit[2]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[140825000] i2c_read_byte: bit[1]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[143325000] i2c_read_byte: bit[0]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[151450000] I2C Read: Reg[0x00] = 0xa7
+  PASS: DEVICE_ID = 0xa7
+
+--- Test 2: Read VERSION ---
+[175200000] i2c_write_byte: data=0xa0, sda_bus=0, ack=1
+[197700000] i2c_write_byte: data=0x01, sda_bus=0, ack=1
+[222700000] i2c_write_byte: data=0xa1, sda_bus=0, ack=1
+[225200000] i2c_read_byte: bit[7]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[227700000] i2c_read_byte: bit[6]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[230200000] i2c_read_byte: bit[5]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[232700000] i2c_read_byte: bit[4]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[235200000] i2c_read_byte: bit[3]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[237700000] i2c_read_byte: bit[2]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[240200000] i2c_read_byte: bit[1]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[242700000] i2c_read_byte: bit[0]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[250825000] I2C Read: Reg[0x01] = 0x01
+  PASS: VERSION_MAJ = 0x01
+[274575000] i2c_write_byte: data=0xa0, sda_bus=0, ack=1
+[297075000] i2c_write_byte: data=0x02, sda_bus=0, ack=1
+[322075000] i2c_write_byte: data=0xa1, sda_bus=0, ack=1
+[324575000] i2c_read_byte: bit[7]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[327075000] i2c_read_byte: bit[6]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[329575000] i2c_read_byte: bit[5]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[332075000] i2c_read_byte: bit[4]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[334575000] i2c_read_byte: bit[3]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[337075000] i2c_read_byte: bit[2]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[339575000] i2c_read_byte: bit[1]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[342075000] i2c_read_byte: bit[0]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[350200000] I2C Read: Reg[0x02] = 0x00
+  PASS: VERSION_MIN = 0x00
+
+--- Test 3: SCRATCH0 Write/Read ---
+[373950000] i2c_write_byte: data=0xa0, sda_bus=0, ack=1
+[396450000] i2c_write_byte: data=0x05, sda_bus=0, ack=1
+[418950000] i2c_write_byte: data=0x55, sda_bus=0, ack=1
+[448325000] i2c_write_byte: data=0xa0, sda_bus=0, ack=1
+[470825000] i2c_write_byte: data=0x05, sda_bus=0, ack=1
+[495825000] i2c_write_byte: data=0xa1, sda_bus=0, ack=1
+[498325000] i2c_read_byte: bit[7]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[500825000] i2c_read_byte: bit[6]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[503325000] i2c_read_byte: bit[5]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[505825000] i2c_read_byte: bit[4]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[508325000] i2c_read_byte: bit[3]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[510825000] i2c_read_byte: bit[2]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[513325000] i2c_read_byte: bit[1]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[515825000] i2c_read_byte: bit[0]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[523950000] I2C Read: Reg[0x05] = 0x55
+  PASS: SCRATCH0 = 0x55
+[547700000] i2c_write_byte: data=0xa0, sda_bus=0, ack=1
+[570200000] i2c_write_byte: data=0x05, sda_bus=0, ack=1
+[592700000] i2c_write_byte: data=0xaa, sda_bus=0, ack=1
+[622075000] i2c_write_byte: data=0xa0, sda_bus=0, ack=1
+[644575000] i2c_write_byte: data=0x05, sda_bus=0, ack=1
+[669575000] i2c_write_byte: data=0xa1, sda_bus=0, ack=1
+[672075000] i2c_read_byte: bit[7]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[674575000] i2c_read_byte: bit[6]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[677075000] i2c_read_byte: bit[5]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[679575000] i2c_read_byte: bit[4]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[682075000] i2c_read_byte: bit[3]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[684575000] i2c_read_byte: bit[2]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[687075000] i2c_read_byte: bit[1]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[689575000] i2c_read_byte: bit[0]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[697700000] I2C Read: Reg[0x05] = 0xaa
+  PASS: SCRATCH0 = 0xaa
+
+--- Test 4: SCRATCH1 Write/Read ---
+[721450000] i2c_write_byte: data=0xa0, sda_bus=0, ack=1
+[743950000] i2c_write_byte: data=0x06, sda_bus=0, ack=1
+[766450000] i2c_write_byte: data=0x12, sda_bus=0, ack=1
+[795825000] i2c_write_byte: data=0xa0, sda_bus=0, ack=1
+[818325000] i2c_write_byte: data=0x06, sda_bus=0, ack=1
+[843325000] i2c_write_byte: data=0xa1, sda_bus=0, ack=1
+[845825000] i2c_read_byte: bit[7]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[848325000] i2c_read_byte: bit[6]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[850825000] i2c_read_byte: bit[5]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[853325000] i2c_read_byte: bit[4]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[855825000] i2c_read_byte: bit[3]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[858325000] i2c_read_byte: bit[2]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[860825000] i2c_read_byte: bit[1]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[863325000] i2c_read_byte: bit[0]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[871450000] I2C Read: Reg[0x06] = 0x12
+  PASS: SCRATCH1 = 0x12
+
+--- Test 5: Read LINK_CAPS ---
+[895200000] i2c_write_byte: data=0xa0, sda_bus=0, ack=1
+[917700000] i2c_write_byte: data=0x10, sda_bus=0, ack=1
+[942700000] i2c_write_byte: data=0xa1, sda_bus=0, ack=1
+[945200000] i2c_read_byte: bit[7]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[947700000] i2c_read_byte: bit[6]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[950200000] i2c_read_byte: bit[5]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[952700000] i2c_read_byte: bit[4]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[955200000] i2c_read_byte: bit[3]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[957700000] i2c_read_byte: bit[2]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[960200000] i2c_read_byte: bit[1]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[962700000] i2c_read_byte: bit[0]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[970825000] I2C Read: Reg[0x10] = 0x15
+  PASS: LINK_CAPS = 0x15
+
+--- Test 6: LED Control ---
+[994575000] i2c_write_byte: data=0xa0, sda_bus=0, ack=1
+[1017075000] i2c_write_byte: data=0x20, sda_bus=0, ack=1
+[1039575000] i2c_write_byte: data=0xf0, sda_bus=0, ack=1
+  PASS: LED_OUT hardware = 0xf0
+[1069050000] i2c_write_byte: data=0xa0, sda_bus=0, ack=1
+[1091550000] i2c_write_byte: data=0x20, sda_bus=0, ack=1
+[1116550000] i2c_write_byte: data=0xa1, sda_bus=0, ack=1
+[1119050000] i2c_read_byte: bit[7]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[1121550000] i2c_read_byte: bit[6]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[1124050000] i2c_read_byte: bit[5]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[1126550000] i2c_read_byte: bit[4]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[1129050000] i2c_read_byte: bit[3]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[1131550000] i2c_read_byte: bit[2]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[1134050000] i2c_read_byte: bit[1]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[1136550000] i2c_read_byte: bit[0]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[1144675000] I2C Read: Reg[0x20] = 0xf0
+  PASS: LED_OUT register = 0xf0
+
+--- Test 7: Read Switches ---
+[1168525000] i2c_write_byte: data=0xa0, sda_bus=0, ack=1
+[1191025000] i2c_write_byte: data=0x22, sda_bus=0, ack=1
+[1216025000] i2c_write_byte: data=0xa1, sda_bus=0, ack=1
+[1218525000] i2c_read_byte: bit[7]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[1221025000] i2c_read_byte: bit[6]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[1223525000] i2c_read_byte: bit[5]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[1226025000] i2c_read_byte: bit[4]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[1228525000] i2c_read_byte: bit[3]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[1231025000] i2c_read_byte: bit[2]=1, sda_bus=1, sda_slave=1, sda_slave_oe=1
+[1233525000] i2c_read_byte: bit[1]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[1236025000] i2c_read_byte: bit[0]=0, sda_bus=0, sda_slave=0, sda_slave_oe=1
+[1244150000] I2C Read: Reg[0x22] = 0x3c
+  PASS: SW_IN = 0x3c
+
+--- Test 8: Wrong Slave Address ---
+[1267900000] i2c_write_byte: data=0xa2, sda_bus=1, ack=0
+  PASS: No ACK for wrong address
+
+========================================
+  Test Results: 12 PASS, 0 FAIL
+========================================
+  ALL TESTS PASSED!
+
