@@ -7,8 +7,8 @@ module top(
     // SPI - data plane
     input  logic        spi_cs,     // JA1 - Chip sel
     input  logic        spi_mosi,   // JA2 - Master Out Slave In
-    input  logic        spi_miso,   // JA3 - Master In Slave Out
-    output logic        spi_sclk,   // JA4 - SPI clk
+    output  logic       spi_miso,   // JA3 - Master In Slave Out
+    input logic         spi_sclk,   // JA4 - SPI clk
     // UI - gpio, leds, ...
     
     output logic [7:0]  led,

@@ -373,7 +373,10 @@ module i2c_slave #(
     assign reg_rd = (state == ACK_ADDR && rw_bit && scl_falling && ack_scl_rose) ||
                     (state == WAIT_ACK && !sda && scl_rising);                
 
+
 // DEBUG ==========================================================================
+// synthesis translate_off
+`ifndef SYNTHESIS
     always @(state) begin
         $display("[%0t] === STATE: %s (bit_cnt=%0d, ack_scl_rose=%b, reg_addr=0x%02X, tx_data=0x%02X) ===", 
                  $time, state.name, bit_cnt, ack_scl_rose, reg_addr_r, tx_data);
@@ -388,4 +391,6 @@ module i2c_slave #(
             end
         end
     end
+`endif
+// synthesis translate_on
 endmodule

@@ -130,12 +130,12 @@ set_property CFGBVS VCCO [current_design]
 ## Timing Constraints (async inputs - false paths)
 ## -----------------------------------------------------------------------------
 ## I2C is async to fabric clock
-set_false_path -from [get_ports i2c_scl]
-set_false_path -from [get_ports i2c_sda]
-set_false_path -to [get_ports i2c_sda]
+#set_false_path -from [get_ports i2c_scl]
+#set_false_path -from [get_ports i2c_sda]
+#set_false_path -to [get_ports i2c_sda]
 
 ## SPI is async (CDC handled in RTL)
-set_false_path -from [get_ports spi_cs]
-set_false_path -from [get_ports spi_sclk]
-set_false_path -from [get_ports spi_mosi]
-set_false_path -to [get_ports spi_miso]
+#set_false_path -from [get_ports spi_cs]
+#set_false_path -from [get_ports spi_sclk]
+#set_false_path -from [get_ports spi_mosi]
+#set_false_path -to [get_ports spi_miso]
