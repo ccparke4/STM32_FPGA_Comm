@@ -220,10 +220,8 @@ module tb_i2c_slave();
         i2c_read_byte(data, 1'b0);
         i2c_stop();
         
-        $sformat(msg, "[%0t] I2C Read: Reg[0x%02X] = 0x%02X", $time, reg_address, data);
-        log_msg(msg);
-
-        $display("[%0t] I2C Read:   Reg[0x%02X] = 0x%02X", $time, reg_address, data);
+        $display("[%0t] I2C Read: Reg[0x%02X] = 0x%02X", $time, reg_address, data);
+        $fwrite(log_file, "[%0t] I2C Read: Reg[0x%02X] = 0x%02X\n", $time, reg_address, data);
     endtask
 
     // Helpers ------------------------------------------------------------------------
@@ -265,7 +263,28 @@ module tb_i2c_slave();
         #100;
         rst_n = 1;
         #100;
-
+        
+        // TEST 0: Check reg_addr retreival
+        log_msg("\n--- Test 0: Check reg_addr retrieval ---");
+        begin
+            logic ack;
+            i2c_start();
+            i2c_write_byte({SLAVE_ADDR,1'b0}, ack);
+            if (!ack) log_msg("  ERROR: No ACK on slave addr");
+            i2c_write_byte(8'h00, ack); // register address for DEVICE_ID
+            if (!ack) log_msg("  ERROR: No ACK on reg addr");
+            // check that slave's reg_addr matches
+            $fwrite(log_file,"[%0t] reg_addr at GET_REG phase: 0x%02X\n",$time, reg_addr);
+            if (reg_addr === 8'h00) begin
+                log_msg("  PASS: reg_addr correctly captured BEFORE DEVICE_ID read");
+                test_pass++;
+            end else begin
+                log_msg("  FAIL: reg_addr NOT correct before DEVICE_ID read");
+                test_fail++;
+            end
+            i2c_stop();
+        end
+        
         // TEST 1: Read DEVICE_ID
         log_msg("\n--- Test 1: Read DEVICE_ID ---");
         i2c_reg_read(8'h00, read_data);
