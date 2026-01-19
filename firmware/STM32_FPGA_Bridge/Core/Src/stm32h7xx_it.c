@@ -219,11 +219,5 @@ void SPI4_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-volatile uint8_t spi_dma_complete = 0;
 
-void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
-    if (hspi->Instance == SPI4) {
-        spi_dma_complete = 1;
-    }
-}
 /* USER CODE END 1 */
