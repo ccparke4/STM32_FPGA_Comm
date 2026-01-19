@@ -1,6 +1,6 @@
 # __Adaptive Link Architecture Specification__
-__Version:__ 0.1
-__Date:__ 01/14/2026
+__Version:__ 0.3
+__Date:__ 01/19/2026
 __Status:__ Design Phase
 
 ## 1. Overview
@@ -307,9 +307,38 @@ SPI4:
     - CPHA: 2 Edge (Mode 1)
     - NSS: Software
 ```
+
+## 9. Firmware Implementation
+### 9.1 Overview
+The STM32 firmwawre uses a layered architecture on FreeRTOS to ensure seperation of concerns between the slow Control Plan and the real-time (hopefully hard-time) data plane. <br>
+
+### 9.2 Driver Model
+1. __Low-Level Driver ([fpga_link.c](firmware/STM32_FPGA_Bridge/Drivers/FPGA/src/fpga_link.c)):__
+    - __Abstracts HAL I2C calls (to be moved to DMA).__
+    - Provides atomic `fpga_read_reg` / `fpga_write_reg` primitives.
+    - Handles endianness and timeouts
+2. __Control Task ([fpga_ctrl_task.c](firmware/STM32_FPGA_Bridge/Core/Src/fpga_ctrl_task.c)):__
+    - __Priority:__ Normal
+    - __Role:__ System Supervisor
+    - __Functions:__ Handles initialization, periodic status polling (10Hz), and error logging.
+3. __Data Task ([fpga_spi_task.c](firmware/STM32_FPGA_Bridge/Core/Src/fpga_ctrl_task.c)):__
+    - __Priority:__ High/Real-time (Normal currently for HW test)
+    - __Role:__ Bulk data mover.
+    - __Functions:__ Manages SPI DMA circular buffers. Calculates throughput and validates data integrity.
+4. __Memory Management:__
+    - DMA buffers are stricly placed in (__non-cacheable__) __D2 SRAM__.
+    - MPU is configured too treat SRAM as _Non-cacheable_ to prevent Cortex-M7 D-Cache coherency issues during DMA transfers.
+
+### 9.3 Test Modes
+The firmware supports compile-time test configurations vis [app_config.h](firmware/STM32_FPGA_Bridge/Core/Inc/app_config.h):
+* `TEST_MODE_I2C_ONLY`: Disables SPI task; loops I2C LED toggles.
+* `TEST_MODE_SPI_ONLY`: Disables I2C polling; streams SPI data continuously.
+* `TEST_MODE_STRESS`: Runs both planes concurrently to test bus arbitration and noise immunity.
+
             
-## 9. Revision History 
+# Revision History 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1 | 2026-01-14 | Trey P. | Architecture Draft |
 | 0.2 | 2026-01-18 | Trey P. | I2C FPGA Update |
+| 0.3 | 2026-01-19 | Trey P. | Firmware details |
