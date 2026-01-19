@@ -3,29 +3,42 @@
 ## Overview
 High-speed, real-time bridge between a __Nucleo-H723ZG__ and a __Basys 3 (Artix-7 FPGA)__. This project demonstrates heterogeneous computing by offloading low-level I/O and acceleration tasks to the FPGA while maintaining high-level control on the MCU via __FreeRTOS__.
 
+## Research Focus: __Hardware Offloading Feasibility__
+**Note:** *This project is in development as a reasearch testbed.*
+The architecture is designed to investigate workloads where __computational density outweighs bus latency__. Current candidate applications include:
+
+1. __Inline Security & Storage:__
+    - Transparent AES-256 encrytpion and LZ4 compression for high-speed data logging.
+2. __Digital Signal Processing (DSP):__
+    - Offloading high-order filtering and FFTs to free up MCU cycles for application logic.
+3. __Edge AI Accleration__
+4. __Protocol Bridging:__
+    - Using FPGA as a "Smart PHY" to interface the STM32 with high-speed ADCs or legacy buses requiring strict timing.
+
 __Key Features:__
-* __Dual-Bus Architecture:__ Separate control (I2C) and data (SPI/QSPI/FMC) planes for clean separation of concerns.
+* __Dual-Bus Architecture:__ Separate control (I2C) and data (SPI/QSPI/FMC) planes.
 * __Adaptive Link:__ Runtime-configurable data plane supporting 1-100+ MB/s throughput scaling.
 * __DMA-Accelerated SPI:__ Non-blocking, full-duplex communication using STM32 DMA controllers.
-* __Robust PHY Layer:__ SPI Mode 1 with custom shift guard logic ensuring data integrity at speed.
+* __Robust PHY Layer:__ SPI Mode 1 with custom shift guard logic ensuring data integrity.
 * __CDC (Clock Domain Crossing):__ 3-stage synchronization bridging asynchronous SPI and 100MHz FPGA domains.
-* __Real-Time Diagnostics:__ STM32 SWV ITM debug console integration.
+
 
 ## Architecture
 ![System Block Diagram](docs/architecture/Visualization/SysArchitecture_v0.1.png)
 
 ## Repository Structure
-* `firmware/`: STM32CubeIDE project (C, FreeRTOS, HAL)
-* `fpga/`: Vivado 2025.1 project (SystemVerilog)
+* `firmware/`: STM32CubeIDE project (C, FreeRTOS, HAL) - **Control & Data Plane Implemented**
+* `fpga/`: Vivado 2025.2 project (SystemVerilog)
 * `docs/`: Technical documentation
-    * [Development Log](docs/dev_log.md)
-    * [Adaptive Link Spec](docs/architecture/adaptive_link_spec.md)
 * `tools/`: Scripts and utilities
 
 ## Hardware Setup
 
 __Control Plane (I2C):__
-TBD...
+| Signal | STM32 | FPGA (Basys 3) |
+|--------|-------|----------------|
+| I2C SCL | PB6 | JB1 |
+| I2C SDA | PB7 | JB2 |
 
 __Data Plane (SPI):__
 | Signal | STM32 | FPGA (Basys 3) |
@@ -47,21 +60,20 @@ __Data Plane (SPI):__
     - [x] Verified 0% BER on 64-byte burst packets
 
 - [ ] __Phase 2: Dual-Bus Architecture__
-    - [ ] I2C control plane (register access)
-    - [ ] FPGA register file (System, Link, GPIO)
-    - [ ] Capability discovery (LINK_CAPS)
+    - [x] __Firmware:__ I2C Control Plane Driver (`fpga_link.c`)
+    - [x] __Firmware:__ FreeRTOS Task Separation (Control vs Data)
+    - [x] __Firmware:__ Clean compilation & Linker resolution
+    - [ ] __Hardware:__ Validate I2C Register Read/Write (Stage 2 Validation)
     - [ ] Runtime data plane mode switching
 
 - [ ] __Phase 3: Bandwidth Scaling__
     - [ ] Dynamic SPI clock configuration
     - [ ] QSPI data plane (4-wire, 25+ MB/s)
     - [ ] FMC parallel interface (100+ MB/s)
-    - [ ] Benchmarking: RTT latency, throughput
 
-- [ ] __Phase 4: Application Layer__
-    - [ ] BRAM FIFO for async data buffering
-    - [ ] Real-time workload (pattern gen, edge detection)
-    - [ ] End-to-end pipeline demonstration
+- [ ] __Phase 4: Research & Applications__
+    - [ ] Investigation: AES-256 Core on Artix-7
+    - [ ] Investigation: LZ4 Compression throughput
 
 ## Getting Started
 1. __FPGA:__ Open `fpga/` in Vivado, generate bitstream, program board
