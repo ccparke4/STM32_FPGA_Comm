@@ -94,7 +94,7 @@ HAL_I2C_Mem_Read(&hi2c1, FPGA_ADDR, 0x10, I@C_MEMADD_SIZE_8BIT, buf, 4, 100);   
 |-----------|---------------|
 | invalid register address | NACK on reg byte |
 | write to read only reg | ACK but ignore |
-| read during busy | clock stretch until ready |
+| undefined register read | Returns 0x00 |
 
 ## 4. Register Map
 ### 4.1 Register Overview
@@ -272,9 +272,44 @@ fpga_top
 - spi_slave         # SPI data plane (existing)
     - led_driver    
     - seg7_driver
+
+### 7.3 I2C Slave FSM
+
+See [state_machines.md](state_machines.md) for detailed FSM documentation.
+
+__Verification:__ See [i2c_validation.md](protocols/I2C/i2c_validation.md)
+
+## 8. Hardware Configuration
+### 8.1 Pin Mapping
+| Bus | Signal | STM32H723 | Basys 3 FPGA | Notes |
+|-----|--------|-----------|--------------|-------|
+| I2C | SCL | PB6(I2C1_SCL) | JB1(A14) | 4.7k Pull-up |
+| I2C | SDA | PB7(I2C1_SDA) | JB2(A16) | 4.7k Pull-up |
+| SPI | CS | PE4(SPI_CS) | JA1(J1) | Active low |
+| SPI | MOSI | PE6(SPI4_MOSI) | JA2(L2) | - |
+| SPI | MISO | PE5(SPI4_MISO) | JA3(J2) | - |
+| SPI | SCLK | PE2(SPI4_SCK) | JA4(G2) | Mode 1 (CPOL=0, CPHA=1) |
+
+### 8.2 STM32 Peripheral Configuration
+
+```
+I2C1:
+    - Mode: Fast Mode (400kHz)
+    - Rise Time: 100ns
+    - Fall Time: 10ns
+    - Analog Filter: Enabled
+    - Digital Filter: 0
+
+SPI4:
+    - Mode: Full-Duplex Master
+    - Data Size: 8'b
+    - CPOL: Low
+    - CPHA: 2 Edge (Mode 1)
+    - NSS: Software
+```
             
 ## 9. Revision History 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1 | 2026-01-14 | Trey P. | Architecture Draft |
-
+| 0.2 | 2026-01-18 | Trey P. | I2C FPGA Update |
