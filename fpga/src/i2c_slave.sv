@@ -368,11 +368,8 @@ module i2c_slave #(
     assign reg_wdata = shift_reg;
     
     // Write strobe - delayed by 1 cycle
-    
-    //assign reg_wr = (state == WRITE_DATA) && (next_state == ACK_WRITE);
     assign reg_wr = reg_wr_pending;
-    //assign reg_rd = (state == ACK_ADDR && rw_bit && scl_falling) ||
-                    //(state == WAIT_ACK && !sda && scl_rising);
+    // Read strobe
     assign reg_rd = (state == ACK_ADDR && rw_bit && scl_falling && ack_scl_rose) ||
                     (state == WAIT_ACK && !sda && scl_rising);                
 
