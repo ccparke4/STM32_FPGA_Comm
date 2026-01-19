@@ -11,9 +11,18 @@
 #include "fpga_spi_task.h"
 #include "app_config.h"
 #include "cmsis_os.h"
+#include "main.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+
+#ifndef SPI_CS_HIGH
+#define SPI_CS_HIGH()   HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET)
+#endif
+
+#ifndef SPI_CS_LOW
+#define SPI_CS_LOW()    HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET)
+#endif
 
 /* External References =============================================== */
 
@@ -96,6 +105,7 @@ void StartFpgaSpiTask(void *argument) {
 
 
 /* Private Functions ================================================= */
+
 /**
 * @brief Execute single DMA burst transfer
 */

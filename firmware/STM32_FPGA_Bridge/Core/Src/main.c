@@ -26,13 +26,10 @@
 #include <string.h>
 #include "app_config.h"
 
-#if ENABLE_I2C_SUBSYSTEM
-#include "fpga_ctrl_task.h"
-#endif
 
-#if ENABLE_SPI_SUBSYSTEM
+#include "fpga_ctrl_task.h"
 #include "fpga_spi_task.h"
-#endif
+
 
 
 /* USER CODE END Includes */
@@ -93,11 +90,7 @@ const osThreadAttr_t fpgaSpiTask_attributes = {
 };
 #endif
 
-extern volatile uint8_t spi_dma_complete;
-
-// out of stack, put in SRAM (global); align for cache
-__attribute__((section(".RAM_D2"))) __attribute__((aligned(32))) uint8_t tx_buffer[64];
-__attribute__((section(".RAM_D2"))) __attribute__((aligned(32))) uint8_t rx_buffer[64];
+volatile uint8_t spi_dma_complete = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -458,7 +451,29 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+static void print_system_info(void) {
+	printf("\n");
+	printf("============================================\n");
+	printf("  STM32-FPGA Adaptive Link System\n");
+	printf("============================================\n");
+	printf("  MCU:        STM32H723ZG\n");
+	printf("  FPGA:       Artix-7 (Basys 3)\n");
+	printf("  Test Mode:  %s\n", get_test_mode_string(APP_TEST_MODE));
+    printf("--------------------------------------------\n");
+    printf("  I2C:        %s\n", ENABLE_I2C_SUBSYSTEM ? "ENABLED" : "DISABLED");
+	printf("  SPI:        %s\n", ENABLE_SPI_SUBSYSTEM ? "ENABLED" : "DISABLED");
+	printf("============================================\n\n");
+}
 
+static const char* get_test_mode_string(app_test_mode_t mode) {
+	switch (mode) {
+		case TEST_MODE_NORMAL:          return "NORMAL";
+		case TEST_MODE_I2C_ONLY:        return "I2C_ONLY";
+		case TEST_MODE_SPI_ONLY:        return "SPI_ONLY";
+        case TEST_MODE_I2C_SPI_STRESS:  return "I2C_SPI_STRESS";
+        default:                        return "UNKNOWN";
+    }
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -468,24 +483,27 @@ static void MX_GPIO_Init(void)
   * @retval None
   */
 /* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
-{
-  /* USER CODE BEGIN 5 */
-  /* Infinite loop */
+void StartDefaultTask(void *argument) {
+	/* USER CODE BEGIN 5 */
+	(void) argument;
+	uint32_t seconds_alive = 0;
 
-	int seconds_alive = 0;
+	for (;;) {
+		printf("[SYSTEM] Alive: %lu seconds", seconds_alive++);
 
-  for(;;)
-  {
-	  // print to the SWV ITM console
-	  printf("System Alive: %d seconds | FPGA Link Active\n", seconds_alive++);
+	#if ENABLE_I2C_SUBSYSTEM
+		printf(" | I2C: %s", fpga_ctrl_is_ready() ? "OK" : "INIT");
+	#endif
 
-	  // toggle random LED maybe
+	#if ENABLE_SPI_SUBSYSTEM
+		printf(" | SPI: %s", fpga_spi_is_ready() ? "OK" : "INIT");
+    #endif
 
-	  // update every 1s
-	  osDelay(1000);
-  }
-  /* USER CODE END 5 */
+		printf("\n");
+
+		osDelay(1000);
+	}
+	/* USER CODE END 5 */
 }
 
 /* USER CODE BEGIN Header_StartDebugTask */
@@ -495,15 +513,28 @@ void StartDefaultTask(void *argument)
 * @retval None
 */
 /* USER CODE END Header_StartDebugTask */
-void StartDebugTask(void *argument)
-{
-  /* USER CODE BEGIN StartDebugTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END StartDebugTask */
+void StartDebugTask(void *argument) {
+	/* USER CODE BEGIN StartDebugTask */
+	(void) argument;
+
+	osDelay(2000);
+
+	for (;;) {
+	#if ENABLE_I2C_SUBSYSTEM
+		if (fpga_ctrl_is_ready()) {
+			fpga_ctrl_dump_registers();
+		}
+	#endif
+
+	#if ENABLE_SPI_SUBSYSTEM
+		if (fpga_spi_is_ready()) {
+			fpga_spi_print_stats();
+		}
+	#endif
+
+		osDelay(30000);
+	}
+	/* USER CODE END StartDebugTask */
 }
 
  /* MPU Configuration */

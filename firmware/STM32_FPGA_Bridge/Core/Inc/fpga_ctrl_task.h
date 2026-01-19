@@ -9,7 +9,6 @@
 #define FPGA_CTRL_TASK_H
 
 #include "fpga_link.h"
-#include <cstdint>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -57,3 +56,5 @@ bool fpga_ctrl_is_ready(void);
 * @brief Bump all FPGA regs to debug output
 */
 void fpga_ctrl_dump_registers(void);
+
+#endif

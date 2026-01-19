@@ -120,114 +120,18 @@ typedef struct {
 
 /* Core Functions ========================================================== */
 
-/**
-* @brief    Initialize FPGA communcation and enumerate device
-* @param    hfpga: Pointer to FPGA handle
-* @param    hi2c: Pointer to HAL I2C handle
-* @retval   FPGA_OK on success, error code otherwise
-*/
 fpga_status_t fpga_init(fpga_handle_t *hfpga, I2C_HandleTypeDef *hi2c);
-
-/**
-* @brief    Read single register
-* @param    hfpga: pointer to intialized FPGA handle
-* @param    reg: Register address
-* @param    data: Pointer to store read data
-* @retval   FPGA_OK on success, error code otherwise
-*/
 fpga_status_t fpga_read_reg(fpga_handle_t *hfpga, uint8_t reg, uint8_t *data);
-
-/**
-* @brief    Write single register
-* @param    hfpga: Pointer to initialized FPGA handle
-* @param    reg: Register address
-* @param    data: Data to write
-* @retval   FPGA_OK on success, error code otherwise
-*/
 fpga_status_t fpga_write_reg(fpga_handle_t *hfpga, uint8_t reg, uint8_t data);
-
-/**
-* @brief    Read multiple registers (auto-increment)
-* @param    hfpga: Popinter to initialized FPGA handle
-* @param    reg: Starting register address
-* @param    buf: Buffer to store read data
-* @param    len: Number of bytes to read
-* @retval   FPGA_OK on success, error code otherwise
-*/
 fpga_status_t fpga_read_burst(fpga_handle_t *hfpga, uint8_t reg, uint8_t *buf, uint16_t len);
-
-/**
-* @brief  Write multiple registers (auto-increment)
-* @param  hfpga: Pointer to initialized FPGA handle
-* @param  reg: Starting register address
-* @param  buf: Buffer containing data to write
-* @param  len: Number of bytes to write
-* @retval FPGA_OK on success, error code otherwise
-*/
 fpga_status_t fpga_write_burst(fpga_handle_t *hfpga, uint8_t reg, uint8_t *buf, uint16_t len);
 
-/* Convient Functions ========================================================== */
-/**
-* @brief    Set LED output pattern
-* @param    hfpga: Pointer to initialized FPGA handle
-* @param    pattern: 8-bit LED pattern (LED[7:0])
-* @retval   FPGA_OK on success, error code otherwise
-*/
 fpga_status_t fpga_set_leds(fpga_handle_t *hfpga, uint8_t pattern);
-
-/**
-* @brief  Set 16-bit LED output pattern
-* @param  hfpga: Pointer to initialized FPGA handle
-* @param  pattern: 16-bit LED pattern (LED[15:0])
-* @retval FPGA_OK on success, error code otherwise
-*/
-fpga_status_t fpga_set_leds_16(fpga_handle_t *hfpga, uint16_t pattern);
-
-/**
-* @brief  Read switch input state
-* @param  hfpga: Pointer to initialized FPGA handle
-* @param  sw_state: Pointer to store switch state
-* @retval FPGA_OK on success, error code otherwise
-*/
 fpga_status_t fpga_get_switches(fpga_handle_t *hfpga, uint8_t *sw_state);
-
-/**
-* @brief  Read 16-bit switch input state
-* @param  hfpga: Pointer to initialized FPGA handle
-* @param  sw_state: Pointer to store 16-bit switch state
-* @retval FPGA_OK on success, error code otherwise
-*/
-fpga_status_t fpga_get_switches_16(fpga_handle_t *hfpga, uint16_t *sw_state);
-
-/* Test Functions ============================================================== */
-
-/**
-* @brief  Test scratch register read/write
-* @param  hfpga: Pointer to initialized FPGA handle
-* @retval FPGA_OK if all patterns pass, FPGA_ERR_VERIFY otherwise
-*/
 fpga_status_t fpga_test_scratch(fpga_handle_t *hfpga);
-
-/**
-* @brief  Test communication link (device ready + device ID)
-* @param  hfpga: Pointer to initialized FPGA handle
-* @retval FPGA_OK if device responds correctly
-*/
 fpga_status_t fpga_test_link(fpga_handle_t *hfpga);
 
-/* Utility Functions ============================================================ */
-
-/**
-* @brief  Get error string for status code
-* @param  status: Status code
-* @retval Pointer to error string
-*/
 const char* fpga_status_str(fpga_status_t status);
-
-/**
-* @brief    Print device info to debug output
-* @param    hpfga: Pointer to inititalized FPGA handle
-*/
 void fpga_print_info(fpga_handle_t *hfpga);
 
 #endif

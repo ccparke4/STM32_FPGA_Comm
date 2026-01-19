@@ -27,7 +27,7 @@ typedef enum {
 } app_test_mode_t;
 
 /* active test mode - this is the mode switch (TBD: automate via python)*/
-#define APP_TEST_MODE       TSET_MODE_I2C_ONLY
+#define APP_TEST_MODE       TEST_MODE_I2C_ONLY
 
 /* Subsystem Enable/Disable ============================================= */
 
