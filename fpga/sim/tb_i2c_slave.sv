@@ -33,7 +33,7 @@ module tb_i2c_slave();
     logic       sda_master;             // Master drives SDA
     logic       sda_slave;              // Slave drives SDA
     logic       sda_slave_oe;           // Slave output enable
-    wire        sda_bus;                // Combined SDA bus         
+    logic       sda_bus;                // Combined SDA bus         
 
     // HW Interfaces
     logic [7:0] led_out;
@@ -48,8 +48,20 @@ module tb_i2c_slave();
 
     // I2C Bus model -------------------------------------------------------
     // open drain w/ PU
-    assign sda_bus = (sda_master === 1'b0 || sda_slave_oe) ? 1'b0 : 1'bz;
-    pullup(sda_bus);
+    always_comb begin
+        if (sda_master == 1'b0) begin
+            // Master driving low
+            sda_bus = 1'b0;
+        end
+        else if (sda_slave_oe && (sda_slave == 1'b0)) begin
+            // Slave driving low (OE high AND output is 0)
+            sda_bus = 1'b0;
+        end
+        else begin
+            // Nobody driving low - pull-up makes it high
+            sda_bus = 1'b1;
+        end
+    end
 
     // DUI Inst. -----------------------------------------------------------
     logic [7:0]     reg_addr;
@@ -143,11 +155,15 @@ module tb_i2c_slave();
             #(I2C_PERIOD/4);
         end
         // Release SDA for ACK
-        sda_master  <=  1'bz;
+        sda_master  <=  1'b1;
         #(I2C_PERIOD/4);
         scl_master  <= 1'b1;
         #(I2C_PERIOD/4);
-        ack         = ~sda_bus;
+        $display("[%0t] ACK DEBUG: state=%s, sda_slave_oe=%b, sda_slave(sda_o)=%b, sda_bus=%b", 
+                 $time, dut_i2c.state.name, sda_slave_oe, sda_slave, sda_bus);
+
+        ack         = (sda_bus == 1'b0);  // Changed from ~sda_bus
+        //ack         = ~sda_bus;
         $fwrite(log_file, "[%0t] i2c_write_byte: data=0x%02X, sda_bus=%b, ack=%b\n", 
                 $time, data, sda_bus, ack);
         #(I2C_PERIOD/4);
@@ -159,7 +175,7 @@ module tb_i2c_slave();
     task i2c_read_byte(output [7:0] data, input logic send_ack);
         integer i;
         data        =   8'h00;
-        sda_master <= send_ack ? 1'b0 : 1'bz;    // Release SDA for slave to drive
+        sda_master <= send_ack ? 1'b0 : 1'b1;    // Release SDA for slave to drive
         // Receive 8'b
         for (i = 7; i >= 0; i = i - 1) begin
             #(I2C_PERIOD/4);
@@ -179,7 +195,7 @@ module tb_i2c_slave();
         #(I2C_PERIOD/2);
         scl_master  <= 1'b0;
         #(I2C_PERIOD/4);
-        sda_master  <= 1'bz;
+        sda_master  <= 1'b1;
     endtask
 
     // High-level i2c comm tasks -----------------------------------------------
@@ -254,7 +270,7 @@ module tb_i2c_slave();
         // Initialize
         rst_n      = 0;
         scl_master = 1;
-        sda_master = 1'bz;
+        sda_master = 1'b1;
         sw_in      = 8'hA5;
         test_pass  = 0;
         test_fail  = 0;
