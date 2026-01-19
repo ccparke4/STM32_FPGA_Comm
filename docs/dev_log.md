@@ -607,4 +607,33 @@ See [i2c_validation.md](protocols/I2C/i2c_validation.md) for:
 ### __Next Steps__
 - [ ] __Hardware Verification:__ Deploy bitstream, test with STM32 + logic analyzer. <br>
 - [ ] __Concurrent Testing:__ Verify I2C + SPI Operate without interference. <br>
-- [ ] __STM32 Driver:__ Complete `fpga_read_reg()` and `fpga_write_reg` API. <br>
+- [x] __STM32 Driver:__ Complete `fpga_read_reg()` and `fpga_write_reg` API. <br>
+
+## Entry 10: Firmware Architecture & Compilation
+__Date:__ 01/19/2026 <br>
+
+### __Objectives__ 
+- Implement the STM32 Firmware Architecture defined in the spec.
+- Integrate FreeRTOS to manage concurrent Control (I2C) and Data (SPI) planes.
+- Resolve build system and linker errors to generate a valid binary (.elf).
+- Update system documentation to reflect the "Research/Investigation" focus.
+
+### __Work Completed__ <br>
+
+1. __Driver Implementation:__
+- Created fpga_link.c/h: A hardware abstraction layer handling I2C register R/W, endianness, and timeouts.
+- Created fpga_ctrl_task.c: The system supervisor. Handles DEVICE_ID verification (Expect 0xA7) and status polling.
+- Created fpga_spi_task.c: The high-throughput engine. Manages DMA Circular buffers and data integrity checks.
+
+2. __Build System Configuration:__
+- Configured STM32CubeIDE Include Paths to recognize the modular driver structure (Drivers/FPGA/inc).
+- Implemented app_config.h to allow compile-time switching between Test Modes (I2C_ONLY, SPI_ONLY, STRESS), preventing the need to comment out code during debug.
+
+### Documentation Updates
+- Updated adaptive_link_spec.md to include the concrete Firmware Architecture and finalized Register Map.
+- Updated README.md and Spec to clarify that Encryption and Compression are "Candidate Research Applications" to justify the high-bandwidth link, rather than definitive product features.
+
+### Next Steps
+- [x] __HW Setup:__ Wire up I2C
+- [ ] __Simple Test:__ Flash STM32 & verifiy DEVICE_ID readback
+- [ ] __Logic Analyzer:__ Capture succesful I2C communication.
