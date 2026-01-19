@@ -7,7 +7,6 @@
 *.sim/
 *.hbs
 *.jou
-*.log
 *.str
 .Xil/
 
