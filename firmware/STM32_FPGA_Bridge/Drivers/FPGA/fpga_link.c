@@ -13,7 +13,7 @@
 #include <stdbool.h>
 
 /* Private Macros ======================================================== */
-#define FPGA_I2C_ADDR_WRITE     (FPGA_I2C_ADDR << 1);
+#define FPGA_I2C_ADDR_WRITE     (FPGA_I2C_ADDR << 1)
 
 /*Private Functions ====================================================== */
 /**
