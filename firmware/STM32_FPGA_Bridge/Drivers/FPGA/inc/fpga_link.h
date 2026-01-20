@@ -27,7 +27,7 @@
 
 // Configuration can be overwridden by app_config.h
 #ifndef FPGA_I2C_ADDR
-#define FPGA_I2C_ADDR           0x50 
+#define FPGA_I2C_ADDR           0x50
 #endif
 
 #ifndef FPGA_I2C_TIMEOUT_MS

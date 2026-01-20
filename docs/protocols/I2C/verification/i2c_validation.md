@@ -101,7 +101,7 @@ end
 
 __Verification:__ <br>
 
-![ACK Timing](protocols/I2C/verification/imgs/sim_ack_timing.png)
+![ACK Timing](imgs/sim_ack_timing.png)
 
 ```log
 [22105000] ACK_OUTPUT: state=ACK_ADDR scl_edge=FALL sda_o=0 sda_oe=1 ack_scl_rose=0
