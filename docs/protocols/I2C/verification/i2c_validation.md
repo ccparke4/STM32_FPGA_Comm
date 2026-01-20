@@ -137,7 +137,7 @@ end
 
 __Verification:__ <br>
 
-![Register Address Capture Timing](protocols/I2C/verification/imgs/sim_reg_capture_timing.png)
+![Register Address Capture Timing](imgs/sim_reg_capture_timing.png)
 ```log
 [1169175000] === STATE: GET_REG (bit_cnt=0, ack_scl_rose=0, reg_addr=0x20, tx_data=0x00) ===
 [1187925000] GET_REG: Captured reg_addr=0x22
@@ -175,7 +175,7 @@ end
 
 __Verification:__ <br>
 
-![txdata Loading Waveform](protocols/I2C/verification/imgs/sim_txdata_loading1.png)
+![txdata Loading Waveform](imgs/sim_txdata_loading1.png)
 
 ```log
 [123975000] ACK_ADDR: Loading tx_data=0xa7 for read
