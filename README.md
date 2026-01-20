@@ -51,11 +51,11 @@ __Data Plane (SPI):__
 | MISO | PE5 | JA2 |
 
 ## Primitive Offload Model (Compute vs Offload)
-    - Time on: T_mcu ~= (bytes_in * ops_per_byte) / MCU_ops_per_second
-    - Time offload: T_offload ~= (bytes_in / B_in ) + setup_latency + (bytes_out / B_out) + (bytes_in * ops_per_byte) / FPGA_ops_per_second
-        - B_in is the effective bandwidth from MCU to FPGA
-        - B_out is the effective bandwidth from FPGA back to MCU.
-    - Offload is justified when T_offload < T_mcu (ideally T_offload << T_mcu due to config complexity) by an adequate margin. Ops_per_byte is dependent on algorithm choice and precision, B_in/B_out is dependent on the interface chosen and DMA configuration, setup_latency is dependent on batching/descriptor queues, and FPGA_ops_per_second is dependent on the designed FPGA pipeline/parallelization.
+- Time on: T_mcu ~= (bytes_in * ops_per_byte) / MCU_ops_per_second
+- Time offload: T_offload ~= (bytes_in / B_in ) + setup_latency + (bytes_out / B_out) + (bytes_in * ops_per_byte) / FPGA_ops_per_second
+    - B_in is the effective bandwidth from MCU to FPGA
+    - B_out is the effective bandwidth from FPGA back to MCU.
+- Offload is justified when T_offload < T_mcu (ideally T_offload << T_mcu due to config complexity) by an adequate margin. Ops_per_byte is dependent on algorithm choice and precision, B_in/B_out is dependent on the interface chosen and DMA configuration, setup_latency is dependent on batching/descriptor queues, and FPGA_ops_per_second is dependent on the designed FPGA pipeline/parallelization.
  
 ## Roadmap
 
