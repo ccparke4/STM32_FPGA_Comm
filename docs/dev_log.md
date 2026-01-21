@@ -463,7 +463,7 @@ __Date:__ 01/18/2026 <br>
 - __Symptom:__ Master saw NACK instead of ACK <br>
 - __Root Cause:__ State transition on same edge as ACK drive caused early release <br>
 - __Fix:__ Added `ack_scl_rose` flag to delay transition until after master samples <br>
-
+git
 ```systemverilog
 // i2c_slave.sv
 logic ack_scl_rose;     // Track when master samples ACK
@@ -637,3 +637,38 @@ __Date:__ 01/19/2026 <br>
 - [x] __HW Setup:__ Wire up I2C
 - [ ] __Simple Test:__ Flash STM32 & verifiy DEVICE_ID readback
 - [ ] __Logic Analyzer:__ Capture succesful I2C communication.
+
+## Entry 11: FPGA Debug ILA Setup
+__Date:__ 01/20/2026
+
+### __Objectives__
+* Bring up I2C physical layr between STM32H7 (Master) and Artix-7 (Slave).
+* Investigat initial comm failures (NACK) observed on the bus
+* Establish hardware debugging infrastructure (Oscilliscope & ILA)
+
+### __Work Completed__
+1. __Physical Layer Bringup:__
+* __Issue:__ Initial oscilliscope reads showed signal low
+* __Root Cause:__ Incorrect wiring
+* __Action:__ Reversed wiring
+
+2. __Communication Analysis (External):__
+* captured I2C transactions using a Diligent Digital LA
+* __Observation:__ STM32 correctly sends the address 0x50 (write), but FPGA responds with NACK.
+* __Hypothesis:__ Failure is internal to the FPGA logic (either CDC or address bit-alignment), as the signals are valid.
+
+3. __Debug Infrastructure (Intrnal):__
+* Configured __Vivado ILA__ to probe internal FPGA signals.
+* __Trigger Setup:__
+    * Trigger Condition: `state != IDLE` (Captures the start of the transaction).
+    * Probe signals: `i2c_scl` (raw), `scl_sync` (clean), `state`, `shift_reg`, and `sda_oe`.
+    * Buffer Depth: 8192 samples (for full byte transfer).
+
+### __Issues Encountered:__
+* __Persistent NACK:__ Despite correct waveforms on external wire, the FPGA logic refuses to ack the address.
+* __Simulation Mismatch:__ Behavioral sims pass successfully, indicating issue involves timing or asynchronous input handling not modeled by testbench.
+
+### __Next Steps__
+* [ ]__ILA Capture:** Run the STM32 and trigger the ILA to see what the FPGA _thinks_ its receiving.
+* [ ]__Verify Syncronization:** Check if `scl_sync` matches the physical clock or if noise/bounce is causing state jumps.
+* [ ]__Verify Address Logic:** Confirm the `shift_reg` value inside the FPGA matches expected 0x50 address.
