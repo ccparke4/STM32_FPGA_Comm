@@ -149,7 +149,7 @@ module i2c_slave #(
                 
                 GET_ADDR: begin
                     if (scl_rising && bit_cnt == 3'd7) begin
-                        if (shift_reg[6:0] == SLAVE_ADDR) begin
+                        if (shift_reg[7:1] == SLAVE_ADDR) begin     // SIM-PASS, HW-?
                             next_state = ACK_ADDR;
                         end else begin
                             next_state = IDLE;
@@ -259,7 +259,7 @@ module i2c_slave #(
                             
                             if (bit_cnt == 3'd7) begin
                                 rw_bit <= sda;
-                                if (shift_reg[6:0] == SLAVE_ADDR) begin
+                                if (shift_reg[7:1] == SLAVE_ADDR) begin         // SIM-PASS (6:0), HW-? (7:1)
                                     addr_match <= 1'b1;
                                 end
                             end

@@ -30,6 +30,7 @@ module top(
     logic sda_out;
     logic sda_oe;
     assign i2c_sda = sda_oe ? sda_out : 1'bz;
+    
     wire sda_in = i2c_sda;
 
     // RF signals ------------------------------------------
