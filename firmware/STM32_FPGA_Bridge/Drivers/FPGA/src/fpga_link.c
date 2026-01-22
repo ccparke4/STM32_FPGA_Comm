@@ -39,8 +39,9 @@ fpga_status_t fpga_init(fpga_handle_t *hfpga, I2C_HandleTypeDef *hi2c) {
     hfpga->initialized = false;
 
     /* 1. Check device presence on I2C Bus */
-    if (HAL_I2C_IsDeviceReady(hi2c, FPGA_I2C_ADDR_WRITE, 3, FPGA_I2C_TIMEOUT_MS) != HAL_OK) {
-        return FPGA_ERR_I2C;
+    if (HAL_I2C_IsDeviceReady(hi2c, FPGA_I2C_ADDR_WRITE, 2, FPGA_I2C_TIMEOUT_MS) != HAL_OK) {
+            // This is where it will fail if the FPGA is not ACKing (SDA High)
+    	return FPGA_ERR_I2C;
     }
 
     /* 2. Read & verify DEVICE_ID */
