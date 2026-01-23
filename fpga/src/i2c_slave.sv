@@ -98,6 +98,7 @@ module i2c_slave #(
     // ILA: DEBUG the ACK timing
     (* mark_debug = "true" *) logic       ack_scl_rose;
     logic       reg_wr_pending;
+    (* mark_debug = "true" *) logic       nack_received;
     
     // SDA output control 
     always_comb begin
@@ -116,6 +117,13 @@ module i2c_slave #(
                 sda_o       = tx_data[7];  
                 sda_oe      = 1'b1;
                 sda_driving = 1'b1;
+            end
+            
+            // explicit
+            WAIT_ACK: begin
+                sda_o       = 1'b1;
+                sda_oe      = 1'b0;
+                sda_driving = 1'b0;
             end
             
             default: begin
@@ -142,6 +150,7 @@ module i2c_slave #(
                 end
                 
                 GET_ADDR: begin
+                    // Transition on Falling Edge to prep. ACK
                     if (scl_falling && bit_cnt == 4'd8) begin       // wraparound results in state loop, try 8bit so we count the R/W bit
                         if (addr_match) begin    
                             next_state = ACK_ADDR;
@@ -152,6 +161,7 @@ module i2c_slave #(
                 end
                 
                 ACK_ADDR: begin
+                    // stay in ACK state until SCL falls (end of 9th SCK)
                     if (scl_falling && ack_scl_rose) begin
                         if (rw_bit) begin
                             next_state = READ_DATA;
@@ -162,7 +172,8 @@ module i2c_slave #(
                 end
                 
                 GET_REG: begin
-                    if (scl_rising && bit_cnt == 3'd7) begin
+                    // Wait for 8th bit to finish before we go to ACK state
+                    if (scl_falling && bit_cnt == 4'd8) begin
                         next_state = ACK_REG;
                     end
                 end
@@ -174,7 +185,7 @@ module i2c_slave #(
                 end
                 
                 WRITE_DATA: begin
-                    if (scl_rising && bit_cnt == 3'd7) begin
+                    if (scl_falling && bit_cnt == 4'd8) begin
                         next_state = ACK_WRITE;
                     end
                 end
@@ -186,14 +197,17 @@ module i2c_slave #(
                 end
                 
                 READ_DATA: begin
-                    if (scl_falling && bit_cnt == 3'd7) begin
+                    // Slaved Tx'd 8 bits, now release bus for master ACK
+                    if (scl_falling && bit_cnt == 4'd8) begin
                         next_state = WAIT_ACK;
                     end
                 end
                 
                 WAIT_ACK: begin
-                    if (scl_rising) begin
-                        if (sda) begin
+                    // captued ACK/NACK on rising edge (see seq. logic)
+                    // Now on Falling we act on it
+                    if (scl_falling) begin
+                        if (nack_received) begin
                             next_state = IDLE;      
                         end else begin
                             next_state = READ_DATA; 
@@ -211,33 +225,39 @@ module i2c_slave #(
         if (!rst_n) begin
             state           <= IDLE;
             shift_reg       <= 8'h00;
-            bit_cnt         <= 3'd0;
+            bit_cnt         <= 4'd0;
             rw_bit          <= 1'b0;
             reg_addr_r      <= 8'h00;
             addr_match      <= 1'b0;
             tx_data         <= 8'h00;
             ack_scl_rose    <= 1'b0;   
             reg_wr_pending  <= 1'b0;    
+            nack_received   <= 1'b0;
         end
         else begin
-            state <= next_state;
-            
+            // Default signal updated
             reg_wr_pending  <= 1'b0;
             
             if (start_detect) begin
-                bit_cnt         <= 3'd0;
+                state           <= GET_ADDR;
+                bit_cnt         <= 4'd0;
                 shift_reg       <= 8'h00;
                 addr_match      <= 1'b0;
                 ack_scl_rose    <= 1'b0; 
+                nack_received   <= 1'b0;
             end
             else if (stop_detect) begin
+                state           <= IDLE;
                 addr_match      <= 1'b0;
                 ack_scl_rose    <= 1'b0;
             end
             else begin
+                // Normal state updated
+                state <= next_state;
+                    
                 case (state)
                     IDLE: begin
-                        bit_cnt         <= 3'd0;
+                        bit_cnt         <= 4'd0;
                         ack_scl_rose    <= 1'b0;
                     end
                     
@@ -246,8 +266,8 @@ module i2c_slave #(
                         if (scl_rising) begin
                             shift_reg <= {shift_reg[6:0], sda};
                             bit_cnt   <= bit_cnt + 1'b1;
-                            
-                            if (bit_cnt == 3'd7) begin
+                            // check on 7th bit
+                            if (bit_cnt == 4'd7) begin
                                 rw_bit <= sda;
                                 if (shift_reg[6:0] == SLAVE_ADDR) begin         // changed from 7:1 to 6:0
                                     addr_match <= 1'b1;
@@ -261,7 +281,7 @@ module i2c_slave #(
                             ack_scl_rose    <= 1'b1;
                         end
                         if (scl_falling && ack_scl_rose) begin
-                            bit_cnt         <= 3'd0;
+                            bit_cnt         <= 4'd0;
                             ack_scl_rose    <= 1'b0;
                             if (rw_bit) begin
                                 tx_data <= reg_rdata;
@@ -270,12 +290,12 @@ module i2c_slave #(
                     end
                     
                     GET_REG: begin
-                    ack_scl_rose    <= 1'b0;    
+                        ack_scl_rose    <= 1'b0;    
                         if (scl_rising) begin
                             shift_reg <= {shift_reg[6:0], sda};
                             bit_cnt   <= bit_cnt + 1'b1;
                             
-                            if (bit_cnt == 3'd7) begin
+                            if (bit_cnt == 4'd7) begin
                                 reg_addr_r <= {shift_reg[6:0], sda};
                             end
                         end
@@ -286,7 +306,7 @@ module i2c_slave #(
                             ack_scl_rose    <= 1'b1;
                         end
                         if (scl_falling && ack_scl_rose) begin
-                            bit_cnt         <= 3'd0;
+                            bit_cnt         <= 4'd0;
                             ack_scl_rose    <= 1'b0;
                         end
                     end
@@ -305,7 +325,7 @@ module i2c_slave #(
                             reg_wr_pending  <= 1'b1;        
                         end
                         if (scl_falling && ack_scl_rose) begin
-                            bit_cnt         <= 3'd0;
+                            bit_cnt         <= 4'd0;
                             reg_addr_r      <= reg_addr_r + 1'b1;
                             ack_scl_rose    <= 1'b0;
                         end
@@ -321,12 +341,14 @@ module i2c_slave #(
                     
                     WAIT_ACK: begin
                         if (scl_rising) begin
+                            // capture masters ACK/NACK bit 
+                            nack_received <= sda;
                             if (!sda) begin
                                 reg_addr_r <= reg_addr_r + 1'b1;        
                             end     
                         end
                         if (scl_falling) begin
-                            bit_cnt <= 3'd0;
+                            bit_cnt <= 4'd0;
                             tx_data <= reg_rdata;
                         end
                     end
@@ -340,8 +362,8 @@ module i2c_slave #(
     // Reg File interface 
     assign reg_addr  = reg_addr_r;
     assign reg_wdata = shift_reg;
-    
     assign reg_wr = reg_wr_pending;
+    
     assign reg_rd = (state == ACK_ADDR && rw_bit && scl_falling && ack_scl_rose) ||
                     (state == WAIT_ACK && !sda && scl_rising);                
 
