@@ -25,6 +25,24 @@
 #include "app_config.h"
 #endif
 
+/* Debug ===================================================================*/
+#define FPGA_DEBUG_ENABLE 1
+
+#if FPGA_DEBUG_ENABLE
+    #define FPGA_DEBUG(fmt, ...)        printf("[FPGA_DBG] " fmt "\r\n", ##__VA_ARGS__)
+    // Fixed: Takes a step number AND a description
+    #define FPGA_DEBUG_STEP(num, desc)  printf("[FPGA_DBG] Step %d: %s\r\n", num, desc)
+    #define FPGA_DEBUG_HEX(name, val)   printf("[FPGA_DBG] %s = 0x%02X\r\n", name, val)
+    #define FPGA_DEBUG_BIN(name, val)   printf("[FPGA_DBG] %s = 0b%d%d%d%d%d%d%d%d\r\n", name, \
+                                        (val>>7)&1, (val>>6)&1, (val>>5)&1, (val>>4)&1, \
+                                        (val>>3)&1, (val>>2)&1, (val>>1)&1, (val>>0)&1)
+#else
+    #define FPGA_DEBUG(fmt, ...)
+    #define FPGA_DEBUG_STEP(num, desc)
+    #define FPGA_DEBUG_HEX(name, val)
+    #define FPGA_DEBUG_BIN(name, val)
+#endif
+
 // Configuration can be overwridden by app_config.h
 #ifndef FPGA_I2C_ADDR
 #define FPGA_I2C_ADDR           0x50 
@@ -99,7 +117,8 @@ typedef enum {
     FPGA_ERR_DEVICE_ID  = -2,       /**< Wrong device ID */
     FPGA_ERR_TIMEOUT    = -3,       /**< Operation timeout */
     FPGA_ERR_VERIFY     = -4,       /**< Verification failed */
-    FPGA_ERR_PARAM      = -5        /**< Invalid parameter */
+    FPGA_ERR_PARAM      = -5,       /**< Invalid parameter */
+	FPGA_ERR_UNINIT		= -6		/**< Init unsuccessful */
 } fpga_status_t;
 
 /* Device info Structure ===================================================== */
@@ -121,17 +140,17 @@ typedef struct {
 /* Core Functions ========================================================== */
 
 fpga_status_t fpga_init(fpga_handle_t *hfpga, I2C_HandleTypeDef *hi2c);
+fpga_status_t fpga_init_with_retry(fpga_handle_t *hfpga, I2C_HandleTypeDef *hi2c, uint8_t max_retries, uint32_t retry_delay_ms);
+void fpga_i2c_diagnostic(I2C_HandleTypeDef *hi2c);
+
 fpga_status_t fpga_read_reg(fpga_handle_t *hfpga, uint8_t reg, uint8_t *data);
 fpga_status_t fpga_write_reg(fpga_handle_t *hfpga, uint8_t reg, uint8_t data);
-fpga_status_t fpga_read_burst(fpga_handle_t *hfpga, uint8_t reg, uint8_t *buf, uint16_t len);
-fpga_status_t fpga_write_burst(fpga_handle_t *hfpga, uint8_t reg, uint8_t *buf, uint16_t len);
-
 fpga_status_t fpga_set_leds(fpga_handle_t *hfpga, uint8_t pattern);
-fpga_status_t fpga_get_switches(fpga_handle_t *hfpga, uint8_t *sw_state);
 fpga_status_t fpga_test_scratch(fpga_handle_t *hfpga);
 fpga_status_t fpga_test_link(fpga_handle_t *hfpga);
 
 const char* fpga_status_str(fpga_status_t status);
-void fpga_print_info(fpga_handle_t *hfpga);
+const char* hal_i2c_error_str(HAL_StatusTypeDef status);
+
 
 #endif
