@@ -142,8 +142,8 @@ module i2c_slave #(
                 end
                 
                 GET_ADDR: begin
-                    if (scl_rising && bit_cnt == 3'd7) begin
-                        if (shift_reg[7:1] == SLAVE_ADDR) begin    
+                    if (scl_falling && bit_cnt == 3'd0) begin       // changed rising->falling, bit_cnt 7->0 (wraparound)
+                        if (addr_match) begin    
                             next_state = ACK_ADDR;
                         end else begin
                             next_state = IDLE;
@@ -315,6 +315,7 @@ module i2c_slave #(
                         if (scl_falling) begin
                             tx_data <= {tx_data[6:0], 1'b0};
                             bit_cnt <= bit_cnt + 1'b1;
+                            
                         end
                     end
                     
