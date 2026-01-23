@@ -89,13 +89,13 @@ module i2c_slave #(
     
     // Internal regs 
     (* mark_debug = "true" *) logic [7:0] shift_reg;      
-    (* mark_debug = "true" *) logic [2:0] bit_cnt;        
+    (* mark_debug = "true" *) logic [3:0] bit_cnt;        
     (* mark_debug = "true" *) logic       rw_bit;         
     (* mark_debug = "true" *) logic       addr_match;     
     (* mark_debug = "true" *) logic [7:0] reg_addr_r;     
     (* mark_debug = "true" *) logic [7:0] tx_data;        
     
-    // ILA: Very important to debug the ACK timing
+    // ILA: DEBUG the ACK timing
     (* mark_debug = "true" *) logic       ack_scl_rose;
     logic       reg_wr_pending;
     
@@ -142,7 +142,7 @@ module i2c_slave #(
                 end
                 
                 GET_ADDR: begin
-                    if (scl_falling && bit_cnt == 3'd0) begin       // changed rising->falling, bit_cnt 7->0 (wraparound)
+                    if (scl_falling && bit_cnt == 4'd8) begin       // wraparound results in state loop, try 8bit so we count the R/W bit
                         if (addr_match) begin    
                             next_state = ACK_ADDR;
                         end else begin
