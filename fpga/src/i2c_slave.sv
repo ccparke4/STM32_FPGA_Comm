@@ -38,31 +38,39 @@ module i2c_slave #(
         output  logic           reg_rd      
     );
     
-    // CDC SYNC 
-    logic [1:0] scl_sync, sda_sync;
-    logic       scl_d, sda_d;
-    
+    logic scl_clean, sda_clean;
+    logic scl_d, sda_d;  // Re-declared here
+
+    // Filter SCL
+    i2c_debounce #(.CLK_FREQ_MHZ(100), .DEBOUNCE_US(0.1)) db_scl (
+        .clk(clk), .rst_n(rst_n), 
+        .in_raw(scl_i), .out_filtered(scl_clean)
+    );
+
+    // Filter SDA
+    i2c_debounce #(.CLK_FREQ_MHZ(100), .DEBOUNCE_US(0.1)) db_sda (
+        .clk(clk), .rst_n(rst_n), 
+        .in_raw(sda_i), .out_filtered(sda_clean)
+    );
+
+    // Create Delayed versions for Edge Detection
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            scl_sync <= 2'b11;
-            sda_sync <= 2'b11;
-            scl_d    <= 1'b1;
-            sda_d    <= 1'b1;
+            scl_d <= 1'b1;
+            sda_d <= 1'b1;
         end else begin
-            scl_sync <= {scl_sync[0], scl_i};
-            sda_sync <= {sda_sync[0], sda_i};
-            scl_d    <= scl_sync[1];
-            sda_d    <= sda_sync[1];
+            scl_d <= scl_clean;
+            sda_d <= sda_clean;
         end
     end
     
     // ILA: Mark synchronized signals to see what the logic actually "sees"
-    (* mark_debug = "true" *) wire scl = scl_sync[1];
-    (* mark_debug = "true" *) wire sda = sda_sync[1];
+    (* mark_debug = "true" *) wire scl = scl_clean; // Updated alias
+    (* mark_debug = "true" *) wire sda = sda_clean; // Updated alias
     
     // Edge detection
-    (* mark_debug = "true" *) wire scl_rising  = scl && !scl_d;
-    (* mark_debug = "true" *) wire scl_falling = !scl && scl_d;
+    (* mark_debug = "true" *) wire scl_rising  = scl_clean && !scl_d;
+    (* mark_debug = "true" *) wire scl_falling = !scl_clean && scl_d;
     
     logic sda_driving;
     
@@ -269,7 +277,8 @@ module i2c_slave #(
                             // check on 7th bit
                             if (bit_cnt == 4'd7) begin
                                 rw_bit <= sda;
-                                if (shift_reg[6:0] == SLAVE_ADDR) begin         // changed from 7:1 to 6:0
+                                // use concat to check full byte, even if shift reg not updated
+                                if ({shift_reg[6:0], sda} >> 1 == SLAVE_ADDR) begin         // changed from 7:1 to 6:0
                                     addr_match <= 1'b1;
                                 end
                             end
@@ -284,7 +293,7 @@ module i2c_slave #(
                             bit_cnt         <= 4'd0;
                             ack_scl_rose    <= 1'b0;
                             if (rw_bit) begin
-                                tx_data <= reg_rdata;
+                                tx_data <= reg_rdata;       // load data for tx
                             end
                         end
                     end
