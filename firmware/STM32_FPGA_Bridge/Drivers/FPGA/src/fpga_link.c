@@ -14,7 +14,7 @@
 
 /* Private Macros ======================================================== */
 #define FPGA_I2C_ADDR_WRITE     (FPGA_I2C_ADDR << 1)
-
+#define FPGA_I2C_ADDR_READ		(FPGA_I2C_ADDR << 1)
 /*Private Functions ====================================================== */
 /**
 * @brief    Check if handle is valid and initialized
@@ -23,63 +23,174 @@ static inline bool fpga_is_valid(fpga_handle_t *hfpga) {
     return (hfpga != NULL && hfpga->hi2c != NULL);
 }
 
+/**
+ * @brief Helper to get string name from device ID
+ */
+static const char* get_device_name(uint8_t device_id) {
+    switch(device_id) {
+        case 0xA7: return "Artix-7 FPGA";
+        case 0xA0: return "Generic FPGA";
+        case 0x50: return "EEPROM";
+        default:   return "Unknown Device";
+    }
+}
 /* Core Functions Implementation ======================================== */
 
 fpga_status_t fpga_init(fpga_handle_t *hfpga, I2C_HandleTypeDef *hi2c) {
     fpga_status_t status;
+    HAL_StatusTypeDef hal_status;
+
+    FPGA_DEBUG("=== FPGA INIT START ===");
+    FPGA_DEBUG("hfpga=%p, hi2c=%p", (void*)hfpga, (void*)hi2c);
 
     /* Validate Params */
     if (hfpga == NULL || hi2c == NULL) {
+        FPGA_DEBUG("ERROR: NULL parameters");
         return FPGA_ERR_PARAM;
     }
 
     /* Initialize handle */
     memset(hfpga, 0, sizeof(fpga_handle_t));
     hfpga->hi2c = hi2c;
-    hfpga->initialized = false;
+
+    /* CRITICAL FIX: Set true NOW so read_reg doesn't block us */
+    hfpga->initialized = true;
+    FPGA_DEBUG("Handle initialized (Tentative)");
 
     /* 1. Check device presence on I2C Bus */
-    if (HAL_I2C_IsDeviceReady(hi2c, FPGA_I2C_ADDR_WRITE, 3, FPGA_I2C_TIMEOUT_MS) != HAL_OK) {
+    FPGA_DEBUG_STEP(1, "Ping Device");
+    FPGA_DEBUG("Checking device at address 0x%02X (write)", FPGA_I2C_ADDR_WRITE);
+
+    hal_status = HAL_I2C_IsDeviceReady(hi2c, FPGA_I2C_ADDR_WRITE, 3, FPGA_I2C_TIMEOUT_MS);
+
+    if (hal_status != HAL_OK) {
+        FPGA_DEBUG("ERROR: Device not ready. HAL Status: %s (0x%02X)",
+                   hal_i2c_error_str(hal_status), hal_status);
+        FPGA_DEBUG("Check: 1) Physical connections 2) Pull-up resistors 3) Power");
+
+        // Diagnostic: Try with read address just in case
+        hal_status = HAL_I2C_IsDeviceReady(hi2c, FPGA_I2C_ADDR_READ, 1, 10);
+        FPGA_DEBUG("Test with read address 0x%02X: %s",
+                   FPGA_I2C_ADDR_READ, hal_i2c_error_str(hal_status));
+
+        hfpga->initialized = false; // Revoke init status
         return FPGA_ERR_I2C;
     }
+    FPGA_DEBUG("SUCCESS: Device responded to address ping");
 
     /* 2. Read & verify DEVICE_ID */
+    FPGA_DEBUG_STEP(2, "Verify ID");
+    FPGA_DEBUG("Reading DEVICE_ID from register 0x%02X", FPGA_REG_DEVICE_ID);
+
     status = fpga_read_reg(hfpga, FPGA_REG_DEVICE_ID, &hfpga->info.device_id);
+
     if (status != FPGA_OK) {
+        FPGA_DEBUG("ERROR: Failed to read DEVICE_ID. FPGA Status: %s (%d)",
+                   fpga_status_str(status), status);
+        hfpga->initialized = false; // Revoke init status
         return status;
     }
 
+    FPGA_DEBUG_HEX("DEVICE_ID read", hfpga->info.device_id);
+
     if (hfpga->info.device_id != FPGA_DEVICE_ID_EXPECTED) {
+        FPGA_DEBUG("ERROR: Device ID mismatch");
+        FPGA_DEBUG("Expected: 0x%02X (%s)", FPGA_DEVICE_ID_EXPECTED,
+                   get_device_name(FPGA_DEVICE_ID_EXPECTED));
+        FPGA_DEBUG("Received: 0x%02X (%s)", hfpga->info.device_id,
+                   get_device_name(hfpga->info.device_id));
+
+        hfpga->initialized = false; // Revoke init status
         return FPGA_ERR_DEVICE_ID;
     }
+    FPGA_DEBUG("SUCCESS: Device ID verified");
 
     /* 3. Read Version information */
-    status = fpga_read_reg(hfpga, FPGA_REG_VERSION_MAJ, &hfpga->info.version_maj);
-    if (status != FPGA_OK) return status;
-    
-    status = fpga_read_reg(hfpga, FPGA_REG_VERSION_MIN, &hfpga->info.version_min);
-    if (status != FPGA_OK) return status;
+    FPGA_DEBUG_STEP(3, "Read Versions");
 
-    /* Phase 4: Read link capabilities */
-    status = fpga_read_reg(hfpga, FPGA_REG_LINK_CAPS, &hfpga->info.link_caps);
-    if (status != FPGA_OK) return status;
+    // Read major version
+    status = fpga_read_reg(hfpga, FPGA_REG_VERSION_MAJ, &hfpga->info.version_maj);
+    if (status != FPGA_OK) {
+        FPGA_DEBUG("ERROR: Failed to read VERSION_MAJ");
+        hfpga->initialized = false;
+        return status;
+    }
     
-    /* Mark as initialized */
-    hfpga->initialized = true;
+    // Read minor version
+    status = fpga_read_reg(hfpga, FPGA_REG_VERSION_MIN, &hfpga->info.version_min);
+    if (status != FPGA_OK) {
+        FPGA_DEBUG("ERROR: Failed to read VERSION_MIN");
+        hfpga->initialized = false;
+        return status;
+    }
+    FPGA_DEBUG("Version: v%d.%d", hfpga->info.version_maj, hfpga->info.version_min);
+
+    /* 4. Read link capabilities */
+    FPGA_DEBUG_STEP(4, "Read Capabilities");
+    status = fpga_read_reg(hfpga, FPGA_REG_LINK_CAPS, &hfpga->info.link_caps);
+    if (status != FPGA_OK) {
+        hfpga->initialized = false;
+        return status;
+    }
+
+    // Parse capabilities for debug log
+    uint8_t bus_width = (hfpga->info.link_caps >> 6) & 0x03;
+    uint8_t max_clk = (hfpga->info.link_caps >> 4) & 0x03;
+    uint8_t fmi_avail = (hfpga->info.link_caps >> 3) & 0x01;
+    uint8_t dma_support = (hfpga->info.link_caps >> 2) & 0x01;
+    uint8_t crc_avail = (hfpga->info.link_caps >> 1) & 0x01;
+    uint8_t irq_avail = hfpga->info.link_caps & 0x01;
+    
+    FPGA_DEBUG("Capabilities: BusWidth=%d, MaxClk=%dMHz, FMI=%d, DMA=%d, CRC=%d, IRQ=%d",
+               (1 << bus_width), (max_clk == 0 ? 10 : max_clk == 1 ? 25 : max_clk == 2 ? 50 : 100),
+               fmi_avail, dma_support, crc_avail, irq_avail);
+
+    /* Success - Keep initialized as true */
+    FPGA_DEBUG("=== FPGA INIT COMPLETE ===");
+    FPGA_DEBUG("Device: 0x%02X, Version: v%d.%d, Capabilities: 0x%02X",
+               hfpga->info.device_id, hfpga->info.version_maj,
+               hfpga->info.version_min, hfpga->info.link_caps);
     
     return FPGA_OK;
 }
 
-fpga_status_t fpga_read_reg(fpga_handle_t *hfpga, uint8_t reg, uint8_t *data) {
-    if (!fpga_is_valid(hfpga) || data == NULL) {
+fpga_status_t fpga_read_reg(fpga_handle_t *hfpga, uint8_t reg_addr, uint8_t *value) {
+    HAL_StatusTypeDef hal_status;
+
+    if (hfpga == NULL || value == NULL) {
+        FPGA_DEBUG("[fpga_read_reg] ERROR: NULL parameters");
         return FPGA_ERR_PARAM;
     }
 
-    if (HAL_I2C_Mem_Read(hfpga->hi2c, FPGA_I2C_ADDR_WRITE, reg,
-            I2C_MEMADD_SIZE_8BIT, data, 1, FPGA_I2C_TIMEOUT_MS) != HAL_OK) {
+    if (!hfpga->initialized) {
+        FPGA_DEBUG("[fpga_read_reg] ERROR: FPGA not initialized");
+        return FPGA_ERR_UNINIT;
+    }
+
+    FPGA_DEBUG("[fpga_read_reg] Reading reg 0x%02X", reg_addr);
+
+    // Step 1: Write register address
+    hal_status = HAL_I2C_Master_Transmit(hfpga->hi2c, FPGA_I2C_ADDR_WRITE, &reg_addr, 1, FPGA_I2C_TIMEOUT_MS);
+
+    if (hal_status != HAL_OK) {
+        FPGA_DEBUG("[fpga_read_reg] ERROR: Address write failed. HAL Status: %s",
+                   hal_i2c_error_str(hal_status));
+        FPGA_DEBUG("  Addr: 0x%02X, Reg: 0x%02X", FPGA_I2C_ADDR_WRITE, reg_addr);
+        return FPGA_ERR_I2C;
+    }
+    FPGA_DEBUG("[fpga_read_reg] Address write successful");
+
+    // Step 2: Read register value
+    hal_status = HAL_I2C_Master_Receive(hfpga->hi2c, FPGA_I2C_ADDR_READ, value, 1, FPGA_I2C_TIMEOUT_MS);
+
+    if (hal_status != HAL_OK) {
+        FPGA_DEBUG("[fpga_read_reg] ERROR: Data read failed. HAL Status: %s",
+                   hal_i2c_error_str(hal_status));
+        FPGA_DEBUG("  Addr: 0x%02X", FPGA_I2C_ADDR_READ);
         return FPGA_ERR_I2C;
     }
     
+    FPGA_DEBUG("[fpga_read_reg] SUCCESS: Reg 0x%02X = 0x%02X", reg_addr, *value);
     return FPGA_OK;
 }
 
@@ -92,6 +203,8 @@ fpga_status_t fpga_write_reg(fpga_handle_t *hfpga, uint8_t reg, uint8_t data) {
             I2C_MEMADD_SIZE_8BIT, &data, 1, FPGA_I2C_TIMEOUT_MS) != HAL_OK) {
         return FPGA_ERR_I2C;
     }
+
+    FPGA_DEBUG("[fpga_write_reg] SUCCESS: Wrote 0x%02X to Reg 0x%02X", data, reg);
     
     return FPGA_OK;
 }
@@ -317,3 +430,76 @@ fpga_status_t fpga_set_loopback(fpga_handle_t *hfpga, bool enable) {
 fpga_status_t fpga_read_sys_regs(fpga_handle_t *hfpga, uint8_t *buf) {
     return fpga_read_burst(hfpga, FPGA_REG_DEVICE_ID, buf, 7);
 }
+
+// Enhanced I2C diagnostic function
+void fpga_i2c_diagnostic(I2C_HandleTypeDef *hi2c) {
+    FPGA_DEBUG("=== I2C DIAGNOSTIC ===");
+
+    // Test write address (0xA0)
+    HAL_StatusTypeDef status_w = HAL_I2C_IsDeviceReady(hi2c, FPGA_I2C_ADDR_WRITE, 1, 10);
+    FPGA_DEBUG("Write address 0x%02X: %s", FPGA_I2C_ADDR_WRITE, hal_i2c_error_str(status_w));
+
+    // Test read address (0xA1)
+    HAL_StatusTypeDef status_r = HAL_I2C_IsDeviceReady(hi2c, FPGA_I2C_ADDR_READ, 1, 10);
+    FPGA_DEBUG("Read address 0x%02X: %s", FPGA_I2C_ADDR_READ, hal_i2c_error_str(status_r));
+
+    // Test other possible addresses
+    for(uint8_t addr = 0x10; addr < 0x80; addr += 0x10) {
+        HAL_StatusTypeDef status = HAL_I2C_IsDeviceReady(hi2c, addr << 1, 1, 1);
+        if(status == HAL_OK) {
+            FPGA_DEBUG("Found device at address 0x%02X", addr);
+        }
+    }
+
+    FPGA_DEBUG("=== END DIAGNOSTIC ===");
+}
+
+// Retry wrapper for fpga_init with diagnostic
+fpga_status_t fpga_init_with_retry(fpga_handle_t *hfpga, I2C_HandleTypeDef *hi2c,
+                                   uint8_t max_retries, uint32_t retry_delay_ms) {
+    fpga_status_t status;
+    uint8_t attempt = 0;
+
+    FPGA_DEBUG("=== FPGA INIT WITH RETRY (%d attempts) ===", max_retries);
+
+    for(attempt = 1; attempt <= max_retries; attempt++) {
+        FPGA_DEBUG("Attempt %d/%d", attempt, max_retries);
+
+        // Run diagnostic on first failure
+        if(attempt == 2) {
+            fpga_i2c_diagnostic(hi2c);
+        }
+
+        status = fpga_init(hfpga, hi2c);
+
+        if(status == FPGA_OK) {
+            FPGA_DEBUG("SUCCESS on attempt %d", attempt);
+            return FPGA_OK;
+        }
+
+        FPGA_DEBUG("FAILED on attempt %d: %s", attempt, fpga_status_str(status));
+
+        if(attempt < max_retries) {
+            FPGA_DEBUG("Retrying in %ld ms...", retry_delay_ms);
+            HAL_Delay(retry_delay_ms);
+        }
+    }
+
+    FPGA_DEBUG("All %d attempts failed", max_retries);
+    return status;
+}
+
+/**
+ * @brief	I2C error code to string
+ */
+const char* hal_i2c_error_str(HAL_StatusTypeDef status) {
+    switch(status) {
+        case HAL_OK: return "HAL_OK";
+        case HAL_ERROR: return "HAL_ERROR";
+        case HAL_BUSY: return "HAL_BUSY";
+        case HAL_TIMEOUT: return "HAL_TIMEOUT";
+        default: return "UNKNOWN";
+    }
+}
+
+

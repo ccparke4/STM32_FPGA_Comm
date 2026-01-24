@@ -49,7 +49,7 @@ typedef enum {
 /* I2C configuration ==================================================== */
 
 #define FPGA_I2C_HANDLE     hi2c1   // HAL handle
-#define FPGA_I2C_ADDR       0x50    // FPGA slave adddr (7'b)
+#define FPGA_I2C_ADDR       0x55    // FPGA slave adddr (7'b)
 #define FPGA_I2C_TIMEOUT_MS 100     // i2c operation timeout
 
 /* SPI confiuration ===================================================== */

@@ -9,118 +9,129 @@
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
-// Description: 
+// Description: I2C Slave with ILA Debug
 // 
 // Dependencies: 
 // 
 // Revision:
-// Revision 1.1 - Issue with shift_reg on write
+// Revision 1.2 - Added comprehensive ILA debugging
 // Additional Comments:
-
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-// 'dynamic' module, def'ing params before ports
 module i2c_slave #(
-    parameter   logic [6:0]     SLAVE_ADDR = 7'h50  // 7'b addr
+    parameter   logic [6:0]     SLAVE_ADDR = 7'h55  
     )(
         input   logic           clk,        // 100MHz sys clock
-        input   logic           rst_n,      // Active low reset
+        input   logic           rst_n,      
         
         // i2c interface
-        input   logic           scl_i,      // SCL in
-        input   logic           sda_i,      // SDA in
-        output  logic           sda_o,      // SDA out
-        output  logic           sda_oe,     // SDA out enable
+        input   logic           scl_i,      
+        input   logic           sda_i,      
+        output  logic           sda_o,      
+        output  logic           sda_oe,     
         // Register file intrface
-        output  logic [7:0]     reg_addr,   // reg addr
-        output  logic [7:0]     reg_wdata,  // wrtie data
-        output  logic           reg_wr,     // write strobe
-        input   logic [7:0]     reg_rdata,  // read data
-        output  logic           reg_rd      // read strobe
+        output  logic [7:0]     reg_addr,   
+        output  logic [7:0]     reg_wdata,  
+        output  logic           reg_wr,     
+        input   logic [7:0]     reg_rdata,  
+        output  logic           reg_rd      
     );
     
-    // CDC SYNC ==================================================
-    // 2-stage
-    logic [1:0] scl_sync, sda_sync;
-    logic       scl_d, sda_d;
-    
+    logic scl_clean, sda_clean;
+    logic scl_d, sda_d;  // Re-declared here
+
+    // Filter SCL
+    i2c_debounce #(.CLK_FREQ_MHZ(100), .DEBOUNCE_US(0.1)) db_scl (
+        .clk(clk), .rst_n(rst_n), 
+        .in_raw(scl_i), .out_filtered(scl_clean)
+    );
+
+    // Filter SDA
+    i2c_debounce #(.CLK_FREQ_MHZ(100), .DEBOUNCE_US(0.1)) db_sda (
+        .clk(clk), .rst_n(rst_n), 
+        .in_raw(sda_i), .out_filtered(sda_clean)
+    );
+
+    // Create Delayed versions for Edge Detection
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            scl_sync <= 2'b11;
-            sda_sync <= 2'b11;
-            scl_d    <= 1'b1;
-            sda_d    <= 1'b1;
+            scl_d <= 1'b1;
+            sda_d <= 1'b1;
         end else begin
-            scl_sync <= {scl_sync[0], scl_i};
-            sda_sync <= {sda_sync[0], sda_i};
-            scl_d    <= scl_sync[1];
-            sda_d    <= sda_sync[1];
+            scl_d <= scl_clean;
+            sda_d <= sda_clean;
         end
     end
     
-    // sync'd signals
-    wire scl = scl_sync[1];
-    wire sda = sda_sync[1];
+    // ILA: Mark synchronized signals to see what the logic actually "sees"
+    wire scl = scl_clean; // Updated alias
+    wire sda = sda_clean; // Updated alias
     
     // Edge detection
-    wire scl_rising  = scl && !scl_d;
-    wire scl_falling = !scl && scl_d;
+    wire scl_rising  = scl_clean && !scl_d;
+    wire scl_falling = !scl_clean && scl_d;
     
-    // Internal sda_oe for gating (directly from state)
     logic sda_driving;
     
-    // START/STOP detection - GATED by sda_driving to prevent false triggers
+    // START/STOP detection
     wire start_detect = !sda && sda_d && scl && !sda_driving;
     wire stop_detect  = sda && !sda_d && scl && !sda_driving;
     
-    // IDC State Machine =============================================
-    
+    // IDC State Machine 
     typedef enum logic [3:0] {
         IDLE,
-        GET_ADDR,               // Rx 7'b addr + R/W
-        ACK_ADDR,               // send ACK for addr
-        GET_REG,                // Rx reg addr
-        ACK_REG,                // send ACK for reg addr
-        WRITE_DATA,             // rx data byte
-        ACK_WRITE,              // send ACK for write data
-        READ_DATA,              // TRansmit data byte
-        WAIT_ACK                // wait for master ACK/NACK on read
+        GET_ADDR,       
+        ACK_ADDR,       
+        GET_REG,        
+        ACK_REG,        
+        WRITE_DATA,     
+        ACK_WRITE,      
+        READ_DATA,      
+        WAIT_ACK        
     } state_t;
     
-    state_t state, next_state;
+    // ILA: Mark the State variable so we can see the FSM transitions
+    state_t state;
+    state_t next_state;
     
-    // Internal regs ==================================================
-    logic [7:0] shift_reg;      // Shift reg for Rx/Tx
-    logic [2:0] bit_cnt;        // bit counter 0-7
-    logic       rw_bit;         // 0=W, 1=R
-    logic       addr_match;     // Address matched flag
-    logic [7:0] reg_addr_r;     // Internal reg addr
-    logic [7:0] tx_data;        // Seperate Tx regs for reads
+    // Internal regs 
+    logic [7:0] shift_reg;      
+    logic [3:0] bit_cnt;        
+    logic       rw_bit;         
+    logic       addr_match;     
+    logic [7:0] reg_addr_r;     
+    logic [7:0] tx_data;        
     
-    // Flag to track if we see the ACK on clks RISING edge, only exit ACK states after rise & fall
+    // ILA: DEBUG the ACK timing
     logic       ack_scl_rose;
-    
-    // Write strobe - delay reg write by a cycle
     logic       reg_wr_pending;
+    logic       nack_received;
     
-    // SDA output control ============================================
+    // SDA output control 
     always_comb begin
-        sda_o       = 1'b1;
+        sda_o       = 1'b0;     // drive 0 when enabled
         sda_oe      = 1'b0;
         sda_driving = 1'b0;
         
         case (state)
             ACK_ADDR, ACK_REG, ACK_WRITE: begin
-                sda_o       = 1'b0;     // ACK = drive low
-                sda_oe      = 1'b1;
+                sda_o       = 1'b0;     
+                sda_oe      = 1'b1;     // pull low for ack
                 sda_driving = 1'b1;
             end
             
             READ_DATA: begin
-                sda_o       = tx_data[7];  // MSB first
-                sda_oe      = 1'b1;
-                sda_driving = 1'b1;
+                sda_o       = 1'b0;         // May have been the critical error?  
+                sda_oe      = !tx_data[7];  // only drive it R/W = 0
+                sda_driving = !tx_data[7];  // update for start det logic
+            end
+            
+            // explicit
+            WAIT_ACK: begin
+                sda_o       = 1'b1;
+                sda_oe      = 1'b0;
+                sda_driving = 1'b0;
             end
             
             default: begin
@@ -131,7 +142,7 @@ module i2c_slave #(
         endcase
     end
     
-    // FSM - Next state logic =================================================
+    // FSM - Next state logic 
     always_comb begin
         next_state = state;
         
@@ -144,12 +155,12 @@ module i2c_slave #(
         else begin
             case (state)
                 IDLE: begin
-                    // Wait for START
                 end
                 
                 GET_ADDR: begin
-                    if (scl_rising && bit_cnt == 3'd7) begin
-                        if (shift_reg[6:0] == SLAVE_ADDR) begin
+                    // Transition on Falling Edge to prep. ACK; 7 addr + 1 R/W
+                    if (scl_falling && bit_cnt == 4'd8) begin       // wraparound results in state loop, try 8bit so we count the R/W bit
+                        if (addr_match) begin    
                             next_state = ACK_ADDR;
                         end else begin
                             next_state = IDLE;
@@ -158,8 +169,8 @@ module i2c_slave #(
                 end
                 
                 ACK_ADDR: begin
-                // FIX:  only exit after we see ACK clk rise  fal
-                    if (scl_falling && ack_scl_rose) begin
+                    // stay in ACK state until SCL falls (end of 9th SCK)
+                    if (scl_falling) begin
                         if (rw_bit) begin
                             next_state = READ_DATA;
                         end else begin
@@ -169,43 +180,45 @@ module i2c_slave #(
                 end
                 
                 GET_REG: begin
-                    if (scl_rising && bit_cnt == 3'd7) begin
+                    // Wait for 8th bit to finish before we go to ACK state
+                    if (scl_falling && bit_cnt == 4'd8) begin
                         next_state = ACK_REG;
                     end
                 end
                 
                 ACK_REG: begin
-                // FIX: Wait for full ACK clk cycke
                     if (scl_falling && ack_scl_rose) begin
                         next_state = WRITE_DATA;
                     end
                 end
                 
                 WRITE_DATA: begin
-                    if (scl_rising && bit_cnt == 3'd7) begin
+                    if (scl_falling && bit_cnt == 4'd8) begin
                         next_state = ACK_WRITE;
                     end
                 end
                 
                 ACK_WRITE: begin
-                // FIX: Wait for Full ACK
                     if (scl_falling && ack_scl_rose) begin
                         next_state = WRITE_DATA;
                     end
                 end
                 
                 READ_DATA: begin
-                    if (scl_falling && bit_cnt == 3'd7) begin
+                    // Must release SDA before 9th clock
+                    if (scl_falling && bit_cnt == 4'd7) begin
                         next_state = WAIT_ACK;
                     end
                 end
                 
                 WAIT_ACK: begin
-                    if (scl_rising) begin
-                        if (sda) begin
-                            next_state = IDLE;      // NACK
+                    // captued ACK/NACK on rising edge (see seq. logic)
+                    // Now on Falling we act on it
+                    if (scl_falling) begin
+                        if (nack_received) begin
+                            next_state = IDLE;      
                         end else begin
-                            next_state = READ_DATA; // ACK - continue
+                            next_state = READ_DATA; 
                         end
                     end
                 end
@@ -215,51 +228,57 @@ module i2c_slave #(
         end
     end
     
-    // FSM - seq. logic =================================================
+    // FSM - seq. logic 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state           <= IDLE;
             shift_reg       <= 8'h00;
-            bit_cnt         <= 3'd0;
+            bit_cnt         <= 4'd0;
             rw_bit          <= 1'b0;
             reg_addr_r      <= 8'h00;
             addr_match      <= 1'b0;
             tx_data         <= 8'h00;
             ack_scl_rose    <= 1'b0;   
             reg_wr_pending  <= 1'b0;    
+            nack_received   <= 1'b0;
         end
         else begin
-            state <= next_state;
-            
-            // Clear write pending after one cycle
+            // Default signal updated
             reg_wr_pending  <= 1'b0;
             
             if (start_detect) begin
-                bit_cnt         <= 3'd0;
+                state           <= GET_ADDR;
+                bit_cnt         <= 4'd0;
                 shift_reg       <= 8'h00;
                 addr_match      <= 1'b0;
                 ack_scl_rose    <= 1'b0; 
+                nack_received   <= 1'b0;
             end
             else if (stop_detect) begin
+                state           <= IDLE;
                 addr_match      <= 1'b0;
                 ack_scl_rose    <= 1'b0;
             end
             else begin
+                // Normal state updated
+                state <= next_state;
+                    
                 case (state)
                     IDLE: begin
-                        bit_cnt         <= 3'd0;
+                        bit_cnt         <= 4'd0;
                         ack_scl_rose    <= 1'b0;
                     end
                     
                     GET_ADDR: begin
-                        ack_scl_rose    <= 1'b0;    // Ready for upcoming ACK
+                        ack_scl_rose    <= 1'b0;    
                         if (scl_rising) begin
                             shift_reg <= {shift_reg[6:0], sda};
                             bit_cnt   <= bit_cnt + 1'b1;
-                            
-                            if (bit_cnt == 3'd7) begin
+                            // check on 7th bit
+                            if (bit_cnt == 4'd7) begin
                                 rw_bit <= sda;
-                                if (shift_reg[6:0] == SLAVE_ADDR) begin
+                                // use concat to check full byte, even if shift reg not updated
+                                if ({shift_reg[6:0], sda} >> 1 == SLAVE_ADDR) begin         // changed from 7:1 to 6:0
                                     addr_match <= 1'b1;
                                 end
                             end
@@ -267,31 +286,28 @@ module i2c_slave #(
                     end
                     
                     ACK_ADDR: begin
-                        // Track the ACK clock (9th clock) rising edge
                         if (scl_rising) begin
                             ack_scl_rose    <= 1'b1;
-                            $display("[%0t] ACK_ADDR: Saw 9th clock (ACK) rising edge", $time);
                         end
+                        // prep for data phase on falling ACK
                         if (scl_falling && ack_scl_rose) begin
-                            bit_cnt         <= 3'd0;
+                            bit_cnt         <= 4'd0;
                             ack_scl_rose    <= 1'b0;
-                            // Pre-load tx_data for reads BEFORE entering READ_DATA
+                            // tx_data ready for first bit
                             if (rw_bit) begin
-                                tx_data <= reg_rdata;
-                                $display("[%0t] ACK_ADDR: Loading tx_data=0x%02X for read", $time, reg_rdata);
+                                tx_data <= reg_rdata;       // load data for tx
                             end
                         end
                     end
                     
                     GET_REG: begin
-                    ack_scl_rose    <= 1'b0;    // Reset for upcoming ACK
+                        ack_scl_rose    <= 1'b0;    
                         if (scl_rising) begin
                             shift_reg <= {shift_reg[6:0], sda};
                             bit_cnt   <= bit_cnt + 1'b1;
                             
-                            if (bit_cnt == 3'd7) begin
+                            if (bit_cnt == 4'd7) begin
                                 reg_addr_r <= {shift_reg[6:0], sda};
-                                $display("[%0t] GET_REG: Captured reg_addr=0x%02X", $time, {shift_reg[6:0], sda});
                             end
                         end
                     end
@@ -299,37 +315,30 @@ module i2c_slave #(
                     ACK_REG: begin
                         if (scl_rising) begin
                             ack_scl_rose    <= 1'b1;
-                            $display("[%0t] ACK_REG: Saw ACK clock rising edge", $time);
                         end
                         if (scl_falling && ack_scl_rose) begin
-                            bit_cnt         <= 3'd0;
+                            bit_cnt         <= 4'd0;
                             ack_scl_rose    <= 1'b0;
                         end
                     end
                     
                     WRITE_DATA: begin
-                         ack_scl_rose    <= 1'b0;       // reset for coming ACK
+                         ack_scl_rose    <= 1'b0;       
                         if (scl_rising) begin
                             shift_reg <= {shift_reg[6:0], sda};
                             bit_cnt   <= bit_cnt + 1'b1;
-                            $display("[%0t] WRITE_DATA: bit[%0d]=%b, shift_reg=0x%02X", 
-                                     $time, 7-bit_cnt, sda, {shift_reg[6:0], sda});
                         end
                     end
                     
                     ACK_WRITE: begin
                         if (scl_rising) begin
                             ack_scl_rose    <= 1'b1;
-                            reg_wr_pending  <= 1'b1;        // FIX: isse wr strobe, one cycle AFTER shift_reg updated. now shift_reg should be stable
-                            $display("[%0t] ACK_WRITE: Issuing write strobe, shift_reg=0x%02X to reg_addr=0x%02X", 
-                                     $time, shift_reg, reg_addr_r);
+                            reg_wr_pending  <= 1'b1;        
                         end
                         if (scl_falling && ack_scl_rose) begin
-                            bit_cnt         <= 3'd0;
+                            bit_cnt         <= 4'd0;
                             reg_addr_r      <= reg_addr_r + 1'b1;
                             ack_scl_rose    <= 1'b0;
-                            $display("[%0t] ACK_WRITE: Write complete, reg_addr incremented to 0x%02X", 
-                                     $time, reg_addr_r + 1'b1);
                         end
                     end
                     
@@ -337,22 +346,20 @@ module i2c_slave #(
                         if (scl_falling) begin
                             tx_data <= {tx_data[6:0], 1'b0};
                             bit_cnt <= bit_cnt + 1'b1;
-                            $display("[%0t] READ_DATA: Shifted out bit, tx_data now=0x%02X, bit_cnt=%0d", 
-                                     $time, {tx_data[6:0], 1'b0}, bit_cnt+1);
+                            
                         end
                     end
                     
                     WAIT_ACK: begin
                         if (scl_rising) begin
+                            // capture masters ACK/NACK bit 
+                            nack_received <= sda;
                             if (!sda) begin
-                                reg_addr_r <= reg_addr_r + 1'b1;        // ACK = continue
-                                $display("[%0t] WAIT_ACK: Master ACK, incrementing reg_addr", $time);
-                            end else begin
-                                $display("[%0t] WAIT_ACK: Master NACK, ending read", $time);        
-                            end                    
+                                reg_addr_r <= reg_addr_r + 1'b1;        
+                            end     
                         end
                         if (scl_falling) begin
-                            bit_cnt <= 3'd0;
+                            bit_cnt <= 4'd0;
                             tx_data <= reg_rdata;
                         end
                     end
@@ -363,34 +370,13 @@ module i2c_slave #(
         end
     end
     
-    // Reg File interface =============================================
+    // Reg File interface 
     assign reg_addr  = reg_addr_r;
     assign reg_wdata = shift_reg;
-    
-    // Write strobe - delayed by 1 cycle
     assign reg_wr = reg_wr_pending;
-    // Read strobe
-    assign reg_rd = (state == ACK_ADDR && rw_bit && scl_falling && ack_scl_rose) ||
+    
+    // added safe prefetch
+    assign reg_rd = (state == ACK_ADDR && rw_bit) ||
                     (state == WAIT_ACK && !sda && scl_rising);                
 
-
-// DEBUG ==========================================================================
-// synthesis translate_off
-`ifndef SYNTHESIS
-    always @(state) begin
-        $display("[%0t] === STATE: %s (bit_cnt=%0d, ack_scl_rose=%b, reg_addr=0x%02X, tx_data=0x%02X) ===", 
-                 $time, state.name, bit_cnt, ack_scl_rose, reg_addr_r, tx_data);
-    end
-    
-    // Monitor SDA outputs during ACK states
-    always @(posedge clk) begin
-        if (state == ACK_ADDR || state == ACK_REG || state == ACK_WRITE) begin
-            if (scl_rising || scl_falling) begin
-                $display("[%0t] ACK_OUTPUT: state=%s scl_edge=%s sda_o=%b sda_oe=%b ack_scl_rose=%b", 
-                         $time, state.name, scl_rising ? "RISE" : "FALL", sda_o, sda_oe, ack_scl_rose);
-            end
-        end
-    end
-`endif
-// synthesis translate_on
 endmodule
