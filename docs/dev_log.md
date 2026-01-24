@@ -635,5 +635,63 @@ __Date:__ 01/19/2026 <br>
 
 ### Next Steps
 - [x] __HW Setup:__ Wire up I2C
-- [ ] __Simple Test:__ Flash STM32 & verifiy DEVICE_ID readback
-- [ ] __Logic Analyzer:__ Capture succesful I2C communication.
+- [x] __Simple Test:__ Flash STM32 & verifiy DEVICE_ID readback
+- [x] __Logic Analyzer:__ Capture succesful I2C communication.
+
+## Entry 11: I2C Hardware Validation & Bus Contention Dix
+__Date: 01/24/2026__ <br>
+
+### __Objectives__
+* Validate physical I2C link between STM32H7 (Master) and Artix-7 (Slave)
+* Verify register read/write operations using the `fpga_link` driver.
+* Capture waveforms to ensrue clean timing and absence of bus contention.
+
+### __Initial Testing & Failure__
+Upon first integration, the STM32 failed to communicate with the FPGA. The driver reported HAL_I2C_ERROR_AF (Acknowledge Failure) or TIMEOUT.
+
+**Setup:**
+* __Master:__ STM32H7 (PB6/SCL, PB7/SDA) @ 400kHz
+* __Slave:__ FPGA (JB1/SCL, JB2/SDA) Address 0x55
+* __Pull-ups:__ Internal STM32 pull-ups and redundant 2.2k pull-ups.
+
+**Observations (Logic Analyzer):**
+* __Address Phase:__ Master sent 0x55 (Write).
+* __ACK Phase:__ FPGA pulls DSA low (correct).
+* __Transtion Fail:__ Imm. after the ACK bit, the data line showed conflict and master aborted.
+
+### __The Contention Issue__
+The logic analyzer reveiled a _bus contention_ issue during the handoff between the ACK bit and the next data byte. <br>
+
+1. __The Problem:__ FPGA I2C FSM was holding ACK state too long. <br>
+2. __The Mechanism:__ FSM transition on rising edge of next clock or internal sync'd signal.
+3. __The Conflict:__ 
+    * _Clock 9 (ACK/NACK):_ Slave pulls SDSA Low, master releases.
+    * _Clock 9 Falling Edge:_ Master expects slave to release SDA so Master can drive the MSB of the next byte.
+    * _Reality:_ Slave held SDA low while master tried to drive SDA high, resulting in protocol violation(s).
+
+### __The Contention Fix__
+Refactored the `i2c_slave.sv` output logic to enforce strict release times, the slave must release the SDA line immediately upon falling edge of NACK/ACK bit. <br>
+
+### Verification
+#### 1. __Logic Analyzer__
+Contention is gone, handoff is clean <br>
+
+#### 2. __Console Output (SWV)__
+The firmware drive now successfully validates hardware ID...
+```plaintext
+[BOOT] System Reset
+[FPGA] Initializing Link...
+[I2C]  Check ID...
+[I2C]  Read Reg 0x00: 0xA7 (Expected 0xA7) -> MATCH
+[I2C]  Link Active. Version 1.0
+```
+#### 3. __Register Stress Test__
+Performed a loop of 1000 reads/writes to the scratchpad register: <br>
+* Write: 0xAA, Read: 0xAA (pass)
+* Write: 0x55, Read: 0x55 (pass)
+* Success Rate: 100%
+
+### Next Steps
+* [x] Merge `fix/i2c-debug` into `master`
+* [x] Clean up `mark_debug` attributes to reduce FPGA resource usage.
+* [ ] Begin concurrency testing for SPI/I2C integration.
