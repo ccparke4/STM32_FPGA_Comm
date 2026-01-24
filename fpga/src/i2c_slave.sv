@@ -65,18 +65,18 @@ module i2c_slave #(
     end
     
     // ILA: Mark synchronized signals to see what the logic actually "sees"
-    (* mark_debug = "true" *) wire scl = scl_clean; // Updated alias
-    (* mark_debug = "true" *) wire sda = sda_clean; // Updated alias
+    wire scl = scl_clean; // Updated alias
+    wire sda = sda_clean; // Updated alias
     
     // Edge detection
-    (* mark_debug = "true" *) wire scl_rising  = scl_clean && !scl_d;
-    (* mark_debug = "true" *) wire scl_falling = !scl_clean && scl_d;
+    wire scl_rising  = scl_clean && !scl_d;
+    wire scl_falling = !scl_clean && scl_d;
     
     logic sda_driving;
     
     // START/STOP detection
-    (* mark_debug = "true" *) wire start_detect = !sda && sda_d && scl && !sda_driving;
-    (* mark_debug = "true" *) wire stop_detect  = sda && !sda_d && scl && !sda_driving;
+    wire start_detect = !sda && sda_d && scl && !sda_driving;
+    wire stop_detect  = sda && !sda_d && scl && !sda_driving;
     
     // IDC State Machine 
     typedef enum logic [3:0] {
@@ -92,21 +92,21 @@ module i2c_slave #(
     } state_t;
     
     // ILA: Mark the State variable so we can see the FSM transitions
-    (* mark_debug = "true" *) state_t state;
+    state_t state;
     state_t next_state;
     
     // Internal regs 
-    (* mark_debug = "true" *) logic [7:0] shift_reg;      
-    (* mark_debug = "true" *) logic [3:0] bit_cnt;        
-    (* mark_debug = "true" *) logic       rw_bit;         
-    (* mark_debug = "true" *) logic       addr_match;     
-    (* mark_debug = "true" *) logic [7:0] reg_addr_r;     
-    (* mark_debug = "true" *) logic [7:0] tx_data;        
+    logic [7:0] shift_reg;      
+    logic [3:0] bit_cnt;        
+    logic       rw_bit;         
+    logic       addr_match;     
+    logic [7:0] reg_addr_r;     
+    logic [7:0] tx_data;        
     
     // ILA: DEBUG the ACK timing
-    (* mark_debug = "true" *) logic       ack_scl_rose;
+    logic       ack_scl_rose;
     logic       reg_wr_pending;
-    (* mark_debug = "true" *) logic       nack_received;
+    logic       nack_received;
     
     // SDA output control 
     always_comb begin
