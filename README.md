@@ -20,10 +20,9 @@ The architecture is designed to investigate workloads where __computational dens
 __Key Features:__
 * __Dual-Bus Architecture:__ Separate control (I2C) and data (SPI/QSPI/FMC) planes.
 * __Adaptive Link:__ Runtime-configurable data plane supporting 1-100+ MB/s throughput scaling.
+* __Robust I2C Control:__ Custom glitch-filtered I2C Slave FSM with clock-stretching support and collision avoidance.
 * __DMA-Accelerated SPI:__ Non-blocking, full-duplex communication using STM32 DMA controllers.
-* __Robust PHY Layer:__ SPI Mode 1 with custom shift guard logic ensuring data integrity.
 * __CDC (Clock Domain Crossing):__ 3-stage synchronization bridging asynchronous SPI and 100MHz FPGA domains.
-
 
 ## Architecture
 ![System Block Diagram](docs/architecture/Visualization/SysArchitecture_v0.1.png)
@@ -37,10 +36,10 @@ __Key Features:__
 ## Hardware Setup
 
 __Control Plane (I2C):__
-| Signal | STM32 | FPGA (Basys 3) |
-|--------|-------|----------------|
-| I2C SCL | PB6 | JB1 |
-| I2C SDA | PB7 | JB2 |
+| Signal | STM32 | FPGA (Basys 3) | Notes |
+|--------|-------|----------------|-------|
+| I2C SCL | PB6 | JB1 | Slave Address: __0x55__ |
+| I2C SDA | PB7 | JB2 | 400kHz Fast mode |
 
 __Data Plane (SPI):__
 | Signal | STM32 | FPGA (Basys 3) |
@@ -51,11 +50,21 @@ __Data Plane (SPI):__
 | MISO | PE5 | JA2 |
 
 ## Primitive Offload Model (Compute vs Offload)
-- Time on: T_mcu ~= (bytes_in * ops_per_byte) / MCU_ops_per_second
-- Time offload: T_offload ~= (bytes_in / B_in ) + setup_latency + (bytes_out / B_out) + (bytes_in * ops_per_byte) / FPGA_ops_per_second
-    - B_in is the effective bandwidth from MCU to FPGA
-    - B_out is the effective bandwidth from FPGA back to MCU.
-- Offload is justified when T_offload < T_mcu (ideally T_offload << T_mcu due to config complexity) by an adequate margin. Ops_per_byte is dependent on algorithm choice and precision, B_in/B_out is dependent on the interface chosen and DMA configuration, setup_latency is dependent on batching/descriptor queues, and FPGA_ops_per_second is dependent on the designed FPGA pipeline/parallelization.
+The feasibility of offloading a task is determined by comparing execution time on the MCU vs. the total round-trip time of offloading:
+
+* **Time on MCU:**
+    `T_mcu ≈ (bytes_in * ops_per_byte) / MCU_ops_per_second`
+
+* **Time Offload:**
+    `T_offload ≈ (bytes_in / B_in) + setup_latency + (bytes_out / B_out) + (bytes_in * ops_per_byte) / FPGA_ops_per_second`
+
+    * `B_in`: Effective bandwidth from MCU to FPGA.
+    * `B_out`: Effective bandwidth from FPGA back to MCU.
+
+**Conclusion:** Offload is justified when `T_offload < T_mcu` (ideally `T_offload << T_mcu` to justify complexity).
+* `ops_per_byte` depends on algorithm complexity (e.g., AES > XOR).
+* `B_in/B_out` depends on the interface (SPI vs FMC) and DMA efficiency.
+* `setup_latency` is minimized by batching and descriptor queues.
  
 ## Roadmap
 
@@ -70,7 +79,7 @@ __Data Plane (SPI):__
     - [x] __Firmware:__ I2C Control Plane Driver (`fpga_link.c`)
     - [x] __Firmware:__ FreeRTOS Task Separation (Control vs Data)
     - [x] __Firmware:__ Clean compilation & Linker resolution
-    - [ ] __Hardware:__ Validate I2C Register Read/Write (Stage 2 Validation)
+    - [x] __Hardware:__ Validate I2C Register Read/Write (Stage 2 Validation)
     - [ ] Runtime data plane mode switching
 
 - [ ] __Phase 3: Bandwidth Scaling__
