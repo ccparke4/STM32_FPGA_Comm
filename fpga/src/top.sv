@@ -69,7 +69,7 @@ module top(
     
     // I2C init 
     i2c_slave #(
-        .SLAVE_ADDR(7'h50)
+        .SLAVE_ADDR(7'h55)
     ) i2c_inst (
         .clk        (clk),
         .rst_n      (rst_n_sync), // Clean, Synchronized, Active Low

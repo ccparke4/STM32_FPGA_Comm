@@ -20,7 +20,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 module i2c_slave #(
-    parameter   logic [6:0]     SLAVE_ADDR = 7'h50  
+    parameter   logic [6:0]     SLAVE_ADDR = 7'h55  
     )(
         input   logic           clk,        // 100MHz sys clock
         input   logic           rst_n,      
@@ -110,21 +110,21 @@ module i2c_slave #(
     
     // SDA output control 
     always_comb begin
-        sda_o       = 1'b1;
+        sda_o       = 1'b0;     // drive 0 when enabled
         sda_oe      = 1'b0;
         sda_driving = 1'b0;
         
         case (state)
             ACK_ADDR, ACK_REG, ACK_WRITE: begin
                 sda_o       = 1'b0;     
-                sda_oe      = 1'b1;
+                sda_oe      = 1'b1;     // pull low for ack
                 sda_driving = 1'b1;
             end
             
             READ_DATA: begin
-                sda_o       = tx_data[7];  
-                sda_oe      = 1'b1;
-                sda_driving = 1'b1;
+                sda_o       = 1'b0;         // May have been the critical error?  
+                sda_oe      = !tx_data[7];  // only drive it R/W = 0
+                sda_driving = !tx_data[7];  // update for start det logic
             end
             
             // explicit
@@ -158,7 +158,7 @@ module i2c_slave #(
                 end
                 
                 GET_ADDR: begin
-                    // Transition on Falling Edge to prep. ACK
+                    // Transition on Falling Edge to prep. ACK; 7 addr + 1 R/W
                     if (scl_falling && bit_cnt == 4'd8) begin       // wraparound results in state loop, try 8bit so we count the R/W bit
                         if (addr_match) begin    
                             next_state = ACK_ADDR;
@@ -170,7 +170,7 @@ module i2c_slave #(
                 
                 ACK_ADDR: begin
                     // stay in ACK state until SCL falls (end of 9th SCK)
-                    if (scl_falling && ack_scl_rose) begin
+                    if (scl_falling) begin
                         if (rw_bit) begin
                             next_state = READ_DATA;
                         end else begin
@@ -205,8 +205,8 @@ module i2c_slave #(
                 end
                 
                 READ_DATA: begin
-                    // Slaved Tx'd 8 bits, now release bus for master ACK
-                    if (scl_falling && bit_cnt == 4'd8) begin
+                    // Must release SDA before 9th clock
+                    if (scl_falling && bit_cnt == 4'd7) begin
                         next_state = WAIT_ACK;
                     end
                 end
@@ -289,9 +289,11 @@ module i2c_slave #(
                         if (scl_rising) begin
                             ack_scl_rose    <= 1'b1;
                         end
+                        // prep for data phase on falling ACK
                         if (scl_falling && ack_scl_rose) begin
                             bit_cnt         <= 4'd0;
                             ack_scl_rose    <= 1'b0;
+                            // tx_data ready for first bit
                             if (rw_bit) begin
                                 tx_data <= reg_rdata;       // load data for tx
                             end
@@ -373,7 +375,8 @@ module i2c_slave #(
     assign reg_wdata = shift_reg;
     assign reg_wr = reg_wr_pending;
     
-    assign reg_rd = (state == ACK_ADDR && rw_bit && scl_falling && ack_scl_rose) ||
+    // added safe prefetch
+    assign reg_rd = (state == ACK_ADDR && rw_bit) ||
                     (state == WAIT_ACK && !sda && scl_rising);                
 
 endmodule
