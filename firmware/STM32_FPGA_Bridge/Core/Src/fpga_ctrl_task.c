@@ -111,11 +111,11 @@ static void run_init_sequence(void) {
     printf("[FPGA_CTRL] LED Test Pattern...\n");
     for (int i = 0; i < 8; i++) {
         fpga_set_leds(&fpga, 1 << i);
-        osDelay(50);
+        osDelay(200);
     }
     for (int i = 6; i >= 0; i--) {
         fpga_set_leds(&fpga, 1 << i);
-        osDelay(50);
+        osDelay(200);
     }
     fpga_set_leds(&fpga, 0x00);
 
@@ -159,11 +159,21 @@ static void run_i2c_test(void) {
         stats.read_errors++;
     }
 
-    /* Test 3: Mirror switches to LEDs */
-    uint8_t switches;
-    if (fpga_get_switches(&fpga, &switches) == FPGA_OK) {
-        fpga_set_leds(&fpga, switches);
-    }
+	/* Test 3: Mirror switches to LEDs */
+	uint8_t switches;
+	uint8_t led_val = 0;
+
+	if (fpga_get_switches(&fpga, &switches) == FPGA_OK) {
+		// Mask out the top bit so we can use it for heartbeat
+		led_val = switches & 0x7F;
+
+		// Toggle Bit 7 every 5 iterations (approx 500ms since task delay is 100ms)
+		if ((iteration % 10) < 5) {
+			led_val |= 0x80;
+		}
+
+		fpga_set_leds(&fpga, led_val);
+	}
 
     /* Periodic status report */
     uint32_t now = HAL_GetTick();

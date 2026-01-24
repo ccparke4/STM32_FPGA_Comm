@@ -203,6 +203,8 @@ fpga_status_t fpga_write_reg(fpga_handle_t *hfpga, uint8_t reg, uint8_t data) {
             I2C_MEMADD_SIZE_8BIT, &data, 1, FPGA_I2C_TIMEOUT_MS) != HAL_OK) {
         return FPGA_ERR_I2C;
     }
+
+    FPGA_DEBUG("[fpga_write_reg] SUCCESS: Wrote 0x%02X to Reg 0x%02X", data, reg);
     
     return FPGA_OK;
 }
