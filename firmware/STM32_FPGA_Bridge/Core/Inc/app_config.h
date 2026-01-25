@@ -18,16 +18,14 @@
 * @note Set APP_TEST_MODE to one of these values
 */
 
-typedef enum {
-    TEST_MODE_NORMAL = 0,       // All systems active
-    TEST_MODE_I2C_ONLY,         // Control Plane - I2C testing
-    TEST_MODE_SPI_ONLY,         // Data Plane - SPI testing
-    TEST_MODE_I2C_SPI_STRESS,   // Concurrent stress test
-    TEST_MODE_LOOPBACK          // Internal Loopback testing
-} app_test_mode_t;
+#define TEST_MODE_NORMAL            0
+#define TEST_MODE_I2C_ONLY          1
+#define TEST_MODE_SPI_ONLY          2
+#define TEST_MODE_I2C_SPI_STRESS    3
+#define TEST_MODE_LOOPBACK          4
 
 /* active test mode - this is the mode switch (TBD: automate via python)*/
-#define APP_TEST_MODE       TEST_MODE_I2C_ONLY
+#define APP_TEST_MODE       TEST_MODE_NORMAL
 
 /* Subsystem Enable/Disable ============================================= */
 
@@ -40,6 +38,9 @@ typedef enum {
     #define ENABLE_SPI_SUBSYSTEM    1
 #elif(APP_TEST_MODE == TEST_MODE_I2C_SPI_STRESS)
     #define ENABLE_I2C_SUBSYSTEM    1
+    #define ENABLE_SPI_SUBSYSTEM    1
+#elif(APP_TEST_MODE == TEST_MODE_NORMAL)
+	#define ENABLE_I2C_SUBSYSTEM    1
     #define ENABLE_SPI_SUBSYSTEM    1
 #else // TESTT_MODE_NORMAL or TEST_MODE_LOOPBACK
     #define ENABLE_I2C_SUBSYSTEM    1

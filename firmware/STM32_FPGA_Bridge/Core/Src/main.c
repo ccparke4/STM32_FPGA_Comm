@@ -105,7 +105,7 @@ void StartDebugTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 static void print_system_info(void);
-static const char* get_test_mode_string(app_test_mode_t mode);
+static const char* get_test_mode_string(int mode);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -119,11 +119,6 @@ int _write(int file, char *ptr, int len) {
 	return len;
 }
 
-void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
-	if (hspi->Instance == SPI4) {
-		spi_dma_complete = 1;		// completion even on error
-	}
-}
 
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi) {
 	if (hspi->Instance == SPI4) {
@@ -216,7 +211,7 @@ int main(void)
 #endif
 
 #if ENABLE_SPI_SUBSYSTEM
-  fpgaSpiTaskHandle = osThreadNew(StartFpgaSpitask, NULL, &fpgaSpiTask_attributes);
+  fpgaSpiTaskHandle = osThreadNew(StartFpgaSpiTask, NULL, &fpgaSpiTask_attributes);
   DBG_PRINT("[MAIN] Created FPGA SPI (Data Plane) Task\n");
 #else
   DBG_PRINT("[MAIN] SPI Subsystem DISABLED\n");
@@ -465,7 +460,7 @@ static void print_system_info(void) {
 	printf("============================================\n\n");
 }
 
-static const char* get_test_mode_string(app_test_mode_t mode) {
+static const char* get_test_mode_string(int mode) {
 	switch (mode) {
 		case TEST_MODE_NORMAL:          return "NORMAL";
 		case TEST_MODE_I2C_ONLY:        return "I2C_ONLY";

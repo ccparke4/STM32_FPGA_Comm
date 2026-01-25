@@ -57,4 +57,10 @@ bool fpga_ctrl_is_ready(void);
 */
 void fpga_ctrl_dump_registers(void);
 
+/**
+* @brief  Check if FPGA link is read and verified
+* @retval true if ID=0xA7 and I2C stable
+*/
+bool fpga_system_is_ready(void);
+
 #endif
