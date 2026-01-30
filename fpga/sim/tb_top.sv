@@ -131,6 +131,21 @@ module tb_top;
     // SPI signals
     logic       dut_spi_active;
     logic [7:0] dut_spi_rx_byte;
+
+    // Register File
+    register_file reg_file_inst (
+        .clk         (clk),
+        .rst_n       (rst_n_sync),
+        .reg_addr    (dut_reg_addr),
+        .reg_wdata   (dut_reg_wdata),
+        .reg_wr      (dut_reg_wr),
+        .reg_rdata   (dut_reg_rdata),
+        .reg_rd      (dut_reg_rd),
+        .led_out     (led),
+        .sw_in       (sw),
+        .spi_active  (dut_spi_active),
+        .spi_rx_byte (dut_spi_rx_byte)
+    );
     
     // I2C Slave
     i2c_slave #(.SLAVE_ADDR(7'h55)) i2c_inst (

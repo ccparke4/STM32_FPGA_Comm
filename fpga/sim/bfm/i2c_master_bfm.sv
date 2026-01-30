@@ -80,6 +80,7 @@ module i2c_master_bfm #(
     logic        is_read_op;
     logic [7:0]  reg_addr_r;
     logic [7:0]  write_data_r;
+    logic        first_read_bit;        // FIX - flag the 1st read bit 
     
     // Output registers
     logic        scl_out;
@@ -96,20 +97,21 @@ module i2c_master_bfm #(
     //--------------------------------------------------------------------------
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            state         <= ST_IDLE;
-            clk_cnt       <= '0;
-            bit_cnt       <= '0;
-            shift_reg     <= '0;
-            scl_out       <= 1'b1;
-            sda_out       <= 1'b1;
-            sda_drive     <= 1'b0;
-            done          <= 1'b0;
-            ack_error     <= 1'b0;
-            read_data     <= '0;
-            captured_ack  <= 1'b0;
-            is_read_op    <= 1'b0;
-            reg_addr_r    <= '0;
-            write_data_r  <= '0;
+            state           <= ST_IDLE;
+            clk_cnt         <= '0;
+            bit_cnt         <= '0;
+            shift_reg       <= '0;
+            scl_out         <= 1'b1;
+            sda_out         <= 1'b1;
+            sda_drive       <= 1'b0;
+            done            <= 1'b0;
+            ack_error       <= 1'b0;
+            read_data       <= '0;
+            captured_ack    <= 1'b0;
+            is_read_op      <= 1'b0;
+            reg_addr_r      <= '0;
+            write_data_r    <= '0;
+            first_read_bit  <= 1'b0;
         end else begin
             done <= 1'b0;
             
@@ -403,6 +405,8 @@ module i2c_master_bfm #(
                             ack_error <= 1'b1;
                             state <= ST_STOP;
                         end else begin
+                            // slave loads tx_data on the ACK falling and immediatly drives the 1st bit (maybe incorrect)
+                            first_read_bit <= 1'b1;
                             state <= ST_READ_BIT;
                         end
                     end
@@ -413,28 +417,59 @@ module i2c_master_bfm #(
                 ST_READ_BIT: begin
                     clk_cnt <= clk_cnt + 1;
                     
-                    if (clk_cnt < T_HD_DAT) begin
-                        scl_out   <= 1'b0;
-                        sda_drive <= 1'b0;  // Release for slave to drive
-                    end else if (clk_cnt < T_LOW) begin
-                        // Wait in SCL low
-                    end else if (clk_cnt < T_LOW + T_HIGH/2) begin
-                        scl_out <= 1'b1;
-                    end else if (clk_cnt == T_LOW + T_HIGH/2) begin
-                        // Sample data bit
-                        shift_reg <= {shift_reg[6:0], sda_i};
-                    end else if (clk_cnt < T_LOW + T_HIGH) begin
-                        // Continue SCL high
-                    end else begin
-                        scl_out <= 1'b0;
-                        bit_cnt <= bit_cnt + 1;
-                        clk_cnt <= '0;
-                        
-                        if (bit_cnt == 4'd7) begin
-                            read_data <= {shift_reg[6:0], sda_i};
-                            state <= ST_READ_ACK;
+                    if (first_read_bit) begin
+                        // 1st bit -> slave already has data on SDA from ACK
+
+                        // Short low time before raising SCL
+                        if (clk_cnt < T_HD_DAT) begin
+                            scl_out     <= 1'b0;
+                            sda_drive   <= 1'b0;
+                        end else if (clk_cnt < T_HD_DAT + T_SU_DAT) begin
+                            // short setup - data should be stable
+                            scl_out     <= 1'b0;
+                        end else if (clk_cnt < T_HD_DAT + T_SU_DAT + T_HIGH/2) begin
+                            scl_out     <= 1'b1;
+                        end else if (clk_cnt == T_HD_DAT + T_SU_DAT + T_HIGH/2) begin
+                            // sample 1st data bit
+                            shift_reg   <= {shift_reg[6:0], sda_i};
+                        end else if (clk_cnt < T_HD_DAT + T_SU_DAT + T_HIGH) begin
+                            // scl stays high
+                        end else begin
+                            scl_out         <= 1'b0;
+                            bit_cnt         <= bit_cnt + 1;
+                            clk_cnt         <= '0;
+                            first_read_bit  <= 1'b0;        // clear flag for subsequesnt bits
+
+                            if (bit_cnt == 4'd7) begin
+                                read_data <= {shift_reg[6:0], sda_i};
+                                state     <= ST_READ_ACK;
+                            end
                         end
-                    end
+                    end else begin
+                        // typical bit 1-7 timing
+                        if (clk_cnt < T_HD_DAT) begin
+                            scl_out     <= 1'b0;
+                            sda_drive   <= 1'b0;
+                        end else if (clk_cnt < T_LOW) begin
+                            // wait in SCL lo - slave shifts on falling edge
+                        end else if (clk_cnt < T_LOW + T_HIGH/2) begin
+                            scl_out     <= 1'b1;
+                        end else if (clk_cnt == T_LOW + T_HIGH/2) begin
+                            // bit of data
+                            shift_reg   <= {shift_reg[6:0], sda_i};
+                        end else if (clk_cnt < T_LOW + T_HIGH) begin
+                            // continue SCL high
+                        end else begin
+                            scl_out     <= 1'b0;
+                            bit_cnt     <= bit_cnt + 1;
+                            clk_cnt     <= '0;
+
+                            if (bit_cnt == 4'd7) begin
+                                read_data   <= {shift_reg[6:0], sda_i};
+                                state       <= ST_READ_ACK;
+                            end
+                        end
+                    end 
                 end
                 
                 //--------------------------------------------------------------

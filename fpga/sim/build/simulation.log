@@ -3,8 +3,8 @@
 # SW Build 6299465 on Fri Nov 14 19:35:11 GMT 2025
 # IP Build 6300035 on Fri Nov 14 10:48:45 MST 2025
 # SharedData Build 6298862 on Thu Nov 13 04:50:51 MST 2025
-# Start of session at: Thu Jan 29 18:16:32 2026
-# Process ID         : 10304
+# Start of session at: Fri Jan 30 11:50:50 2026
+# Process ID         : 6940
 # Current directory  : C:/Users/trey/STM32_FPGA_Comm/fpga/sim/build
 # Command line       : xsim.exe -log simulation.log -mode tcl -source {xsim.dir/sim_snapshot/xsim_script.tcl}
 # Log file           : C:/Users/trey/STM32_FPGA_Comm/fpga/sim/build/simulation.log
@@ -19,7 +19,7 @@
 # Host memory        : 17170 MB
 # Swap memory        : 1073 MB
 # Total Virtual      : 18243 MB
-# Available Virtual  : 10291 MB
+# Available Virtual  : 10163 MB
 #-----------------------------------------------------------
 source xsim.dir/sim_snapshot/xsim_script.tcl
 # xsim {sim_snapshot} -testplusarg TEST=all -autoloadwcfg -runall
@@ -37,36 +37,36 @@ run -all
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0xab - OK
 [TB] I2C WRITE addr=0x06 data=0xcd - OK
 [SCOREBOARD] I2C WRITE: addr=0x06 data=0xcd - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0xab got=0xxx - *** MISMATCH ***
-[TB] I2C READ  addr=0x06 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x06 exp=0xcd got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x57 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0xab got=0x57 - *** MISMATCH ***
+[TB] I2C READ  addr=0x06 data=0x9b - OK
+[SCOREBOARD] I2C READ:  addr=0x06 exp=0xcd got=0x9b - *** MISMATCH ***
 [TB] I2C WRITE addr=0x20 data=0x55 - OK
 [SCOREBOARD] I2C WRITE: addr=0x20 data=0x55 - OK
-[TB] I2C READ  addr=0x20 data=0xxx - OK
+[TB] I2C READ  addr=0x20 data=0xab - OK
 
 ========== TEST: I2C Read-Only Registers ==========
 
-[SCOREBOARD] I2C READ:  addr=0x20 exp=0x55 got=0xxx - *** MISMATCH ***
-[TB] I2C READ  addr=0x00 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x00 exp=0xa7 got=0xxx - *** MISMATCH ***
-[TB] I2C READ  addr=0x01 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x01 exp=0x01 got=0xxx - *** MISMATCH ***
-[TB] I2C READ  addr=0x02 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x02 exp=0x00 got=0xxx - *** MISMATCH ***
-[TB] I2C READ  addr=0x10 data=0xxx - OK
+[SCOREBOARD] I2C READ:  addr=0x20 exp=0x55 got=0xab - *** MISMATCH ***
+[TB] I2C READ  addr=0x00 data=0x4f - OK
+[SCOREBOARD] I2C READ:  addr=0x00 exp=0xa7 got=0x4f - *** MISMATCH ***
+[TB] I2C READ  addr=0x01 data=0x03 - OK
+[SCOREBOARD] I2C READ:  addr=0x01 exp=0x01 got=0x03 - *** MISMATCH ***
+[TB] I2C READ  addr=0x02 data=0x00 - OK
+[SCOREBOARD] I2C READ:  addr=0x02 exp=0x00 got=0x00 - MATCH
+[TB] I2C READ  addr=0x10 data=0x2b - OK
 
 ========== TEST: SPI Loopback ==========
 
-[SCOREBOARD] I2C READ:  addr=0x10 exp=0x15 got=0xxx - *** MISMATCH ***
-[SPI BFM Error] Time            887655000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
-[SPI BFM Error] Time            887865000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
-[SPI BFM Error] Time            888075000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
-[SPI BFM Error] Time            888285000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
-[SPI BFM Error] Time            888495000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
-[SPI BFM Error] Time            888705000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
-[SPI BFM Error] Time            888915000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
-[SPI BFM Error] Time            889125000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[SCOREBOARD] I2C READ:  addr=0x10 exp=0x15 got=0x2b - *** MISMATCH ***
+[SPI BFM Error] Time            881495000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[SPI BFM Error] Time            881705000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[SPI BFM Error] Time            881915000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[SPI BFM Error] Time            882125000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[SPI BFM Error] Time            882335000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[SPI BFM Error] Time            882545000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[SPI BFM Error] Time            882755000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[SPI BFM Error] Time            882965000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
 [TB] SPI XFER  tx=0x00 rx=0xxx
 [SCOREBOARD] SPI XFER:  tx=0x00 rx=0xxx exp=0x00 - *** MISMATCH ***
 [TB] SPI XFER  tx=0xaa rx=0x00
@@ -128,234 +128,236 @@ run -all
 [SCOREBOARD] SPI XFER:  tx=0x13 rx=0x12 exp=0x12 - MATCH
 [TB] I2C WRITE addr=0x05 data=0x00 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x00 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x00 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x00 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x00 got=0x00 - MATCH
 [TB] I2C WRITE addr=0x05 data=0x01 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x01 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x01 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x03 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x01 got=0x03 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x02 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x02 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x02 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x04 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x02 got=0x04 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x03 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x03 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x03 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x07 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x03 got=0x07 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x04 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x04 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x04 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x08 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x04 got=0x08 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x05 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x05 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x05 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x0b - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x05 got=0x0b - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x06 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x06 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x06 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x0c - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x06 got=0x0c - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x07 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x07 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x07 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x0f - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x07 got=0x0f - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x08 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x08 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x08 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x10 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x08 got=0x10 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x09 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x09 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[TB] Concurrent test: I2C errors=0, SPI errors=1
+[TB] I2C READ  addr=0x05 data=0x13 - OK
+[TB] Concurrent test: I2C errors=9, SPI errors=1
 
 ========== TEST: Stress Test ==========
 
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x09 got=0xxx - *** MISMATCH ***
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x09 got=0x13 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x00 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x00 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x00 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x00 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x00 got=0x00 - MATCH
 [TB] I2C WRITE addr=0x05 data=0x01 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x01 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x01 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x03 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x01 got=0x03 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x02 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x02 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x02 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x04 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x02 got=0x04 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x03 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x03 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x03 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x07 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x03 got=0x07 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x04 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x04 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x04 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x08 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x04 got=0x08 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x05 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x05 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x05 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x0b - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x05 got=0x0b - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x06 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x06 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x06 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x0c - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x06 got=0x0c - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x07 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x07 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x07 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x0f - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x07 got=0x0f - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x08 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x08 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x08 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x10 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x08 got=0x10 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x09 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x09 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x09 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x13 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x09 got=0x13 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x0a - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x0a - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0a got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x14 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0a got=0x14 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x0b - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x0b - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0b got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x17 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0b got=0x17 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x0c - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x0c - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0c got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x18 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0c got=0x18 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x0d - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x0d - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0d got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x1b - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0d got=0x1b - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x0e - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x0e - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0e got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x1c - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0e got=0x1c - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x0f - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x0f - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0f got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x1f - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0f got=0x1f - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x10 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x10 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x10 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x20 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x10 got=0x20 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x11 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x11 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x11 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x23 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x11 got=0x23 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x12 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x12 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x12 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x24 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x12 got=0x24 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x13 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x13 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x13 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x27 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x13 got=0x27 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x14 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x14 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x14 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x28 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x14 got=0x28 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x15 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x15 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x15 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x2b - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x15 got=0x2b - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x16 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x16 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x16 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x2c - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x16 got=0x2c - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x17 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x17 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x17 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x2f - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x17 got=0x2f - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x18 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x18 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x18 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x30 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x18 got=0x30 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x19 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x19 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x19 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x33 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x19 got=0x33 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x1a - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x1a - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1a got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x34 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1a got=0x34 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x1b - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x1b - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1b got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x37 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1b got=0x37 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x1c - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x1c - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1c got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x38 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1c got=0x38 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x1d - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x1d - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1d got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x3b - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1d got=0x3b - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x1e - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x1e - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1e got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x3c - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1e got=0x3c - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x1f - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x1f - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1f got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x3f - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1f got=0x3f - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x20 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x20 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x20 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x40 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x20 got=0x40 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x21 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x21 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x21 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x43 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x21 got=0x43 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x22 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x22 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x22 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x44 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x22 got=0x44 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x23 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x23 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x23 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x47 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x23 got=0x47 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x24 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x24 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x24 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x48 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x24 got=0x48 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x25 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x25 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x25 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x4b - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x25 got=0x4b - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x26 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x26 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x26 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x4c - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x26 got=0x4c - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x27 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x27 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x27 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x4f - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x27 got=0x4f - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x28 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x28 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x28 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x50 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x28 got=0x50 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x29 - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x29 - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x29 got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x53 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x29 got=0x53 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x2a - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x2a - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x2a got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x54 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x2a got=0x54 - *** MISMATCH ***
 [TB] I2C WRITE addr=0x05 data=0x2b - OK
 [SCOREBOARD] I2C WRITE: addr=0x05 data=0x2b - OK
-[TB] I2C READ  addr=0x05 data=0xxx - OK
-[SCOREBOARD] I2C READ:  addr=0x05 exp=0x2b got=0xxx - *** MISMATCH ***
+[TB] I2C READ  addr=0x05 data=0x57 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x2b got=0x57 - *** MISMATCH ***
+[TB] I2C WRITE addr=0x05 data=0x2c - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x2c - OK
 
 [TB] *** TIMEOUT ***
 
 [SCOREBOARD] ============ Final Summary ============
-[SCOREBOARD] I2C Transactions: 118
+[SCOREBOARD] I2C Transactions: 119
 [SCOREBOARD] SPI Transactions: 28
-[SCOREBOARD] Total Errors:     62
+[SCOREBOARD] Total Errors:     59
 [SCOREBOARD] =========================================
-$finish called at time : 10 ms : File "C:/Users/trey/STM32_FPGA_Comm/fpga/sim/tb_top.sv" Line 533
-run: Time (s): cpu = 00:00:00 ; elapsed = 00:00:37 . Memory (MB): peak = 268.062 ; gain = 0.008
+$finish called at time : 10 ms : File "C:/Users/trey/STM32_FPGA_Comm/fpga/sim/tb_top.sv" Line 536
+run: Time (s): cpu = 00:00:00 ; elapsed = 00:00:37 . Memory (MB): peak = 268.102 ; gain = 0.039
 exit
-INFO: xsimkernel Simulation Memory Usage: 22876 KB (Peak: 22876 KB), Simulation CPU Usage: 35983 ms
-INFO: [Common 17-206] Exiting xsim at Thu Jan 29 18:17:13 2026...
+INFO: xsimkernel Simulation Memory Usage: 22912 KB (Peak: 22912 KB), Simulation CPU Usage: 36124 ms
+INFO: [Common 17-206] Exiting xsim at Fri Jan 30 11:51:31 2026...
