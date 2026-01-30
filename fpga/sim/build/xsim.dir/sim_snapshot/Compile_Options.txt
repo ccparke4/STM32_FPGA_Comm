@@ -1,1 +1,0 @@
--debug "typical" -nolog "tb_top" -s "sim_snapshot" -log "elaborate.log" 
