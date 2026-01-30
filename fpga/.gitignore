@@ -1,3 +1,10 @@
+# Xilinx Simulator compiled libraries & artifacts
+sim/build/
+sim/xsim.dir/
+*.wdb
+*.vcd
+*.log
+
 # Vivado Project Files (recreatable)
 *.xpr
 *.runs/
