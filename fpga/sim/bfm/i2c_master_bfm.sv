@@ -465,7 +465,7 @@ module i2c_master_bfm #(
                             clk_cnt     <= '0;
 
                             if (bit_cnt == 4'd7) begin
-                                read_data   <= {shift_reg[6:0], sda_i};
+                                read_data   <= shift_reg;
                                 state       <= ST_READ_ACK;
                             end
                         end
