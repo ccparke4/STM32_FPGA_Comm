@@ -1,129 +1,78 @@
 `timescale 1ns / 1ps
 
-module top(
-    input  logic        clk,        
-    input  logic        rst_n,      // Physical Button (Active High on Basys 3)
+module top (
+    input  logic       clk,      // System Clock
+    input  logic       rst_n,    // Active Low Reset
     
-    // I2C - control plane
-    input  logic        i2c_scl,    
-    inout  wire         i2c_sda,    
+    // --- Physical I2C Pins ---
+    input  logic       scl,      // SCL is Input only for Slave (unless clock stretching)
+    inout  wire        sda,      // SDA is Bidirectional (In/Out)
     
-    // SPI - data plane
-    input  logic        spi_cs,     
-    input  logic        spi_mosi,   
-    output logic        spi_miso,   
-    input  logic        spi_sclk,   
-    
-    // UI
-    output logic [7:0]  led,
-    input  logic [7:0]  sw,         
-    output logic [6:0]  seg,
-    output logic [3:0]  an
+    // --- Physical SPI Pins ---
+    input  logic       sclk,
+    input  logic       cs,
+    input  logic       mosi,
+    output logic       miso
 );
-    
-    // =========================================================================
-    // OPTIMAL RESET SYNC & POLARITY FIX
-    // =========================================================================
-    // ILA: Debug the raw button and the synced result to verify Reset timing
-    (* mark_debug = "true" *) logic rst_n_raw_debug; 
-    (* mark_debug = "true" *) logic rst_n_sync;
-    
-    logic [1:0] rst_sync_reg;
-    
-    // 1. Invert the button: Basys3 buttons are 1 when pressed.
-    //    We want: Button (1) -> Internal Reset (0).
-    wire rst_n_inverted = ~rst_n; 
 
-    // Assign raw input to debug wire just for ILA visualization
-    assign rst_n_raw_debug = rst_n;
+    // --- I2C Internal Signals ---
+    logic sda_i;
+    logic sda_o;
+    logic sda_oe;
 
-    always_ff @(posedge clk) begin
-        // 2. Synchronize the INVERTED signal
-        rst_sync_reg <= {rst_sync_reg[0], rst_n_inverted};
-        rst_n_sync   <= rst_sync_reg[1];
-    end
+    // --- I2C IO BUFFER (The "Physical" Connection) ---
+    // 1. We read from the pin into 'sda_i'
+    assign sda_i = sda; 
     
-    // =========================================================================
-    // I2C PHYSICAL LAYER (IOBUF) 
-    // =========================================================================
-    (* mark_debug = "true" *) logic sda_in;  
-    logic sda_out; 
-    (* mark_debug = "true" *) logic sda_oe;  
-    
-    IOBUF i2c_iobuf (
-        .O (sda_in),       
-        .IO(i2c_sda),      
-        .I (1'b0),         // Always drive 0 (I2C is open drain)
-        .T (~sda_oe)       // T=0 drives, T=1 floats
-    );
+    // 2. If Output Enable (oe) is high, we drive sda_o (usually Low). 
+    //    If oe is low, we let the resistor pull it High (Z).
+    //    (Standard Open-Drain Logic)
+    assign sda = (sda_oe) ? 1'b0 : 1'bz; 
 
-    // RF signals 
+    // --- Internal Register File (Glue Logic) ---
     logic [7:0] reg_addr;
     logic [7:0] reg_wdata;
     logic       reg_wr;
     logic [7:0] reg_rdata;
     logic       reg_rd;
     
-    // Hardware interfaces
-    logic [7:0] led_from_regs;
-    
-    // I2C init 
+    // Simple RAM to store data so we can read it back
+    logic [7:0] memory [0:255];
+
+    always_ff @(posedge clk) begin
+        if (reg_wr) begin
+            memory[reg_addr] <= reg_wdata;
+        end
+        // Always present data for reading
+        reg_rdata <= memory[reg_addr];
+    end
+
+    // --- Instantiate I2C Slave ---
     i2c_slave #(
         .SLAVE_ADDR(7'h55)
     ) i2c_inst (
-        .clk        (clk),
-        .rst_n      (rst_n_sync), // Clean, Synchronized, Active Low
-        .scl_i      (i2c_scl),
-        .sda_i      (sda_in),       
-        .sda_o      (sda_out),      
-        .sda_oe     (sda_oe),       
-        .reg_addr   (reg_addr),
-        .reg_wdata  (reg_wdata),
-        .reg_wr     (reg_wr),
-        .reg_rdata  (reg_rdata),
-        .reg_rd     (reg_rd)
+        .clk(clk),
+        .rst_n(rst_n),
+        .scl_i(scl),         // Connect to Pin
+        .sda_i(sda_i),       // Connect to Input Wire
+        .sda_o(sda_o),       // Connect to Output Wire
+        .sda_oe(sda_oe),     // Connect to Output Enable
+        
+        .reg_addr(reg_addr),
+        .reg_wdata(reg_wdata),
+        .reg_wr(reg_wr),
+        .reg_rdata(reg_rdata),
+        .reg_rd(reg_rd)
     );
-    
-    // RF init. 
-    logic       spi_active;
-    logic [7:0] spi_rx_byte;
-    
-    // WARNING: Ensure register_file treats spi_rx_byte as an INPUT
-    // If it tries to drive it, you will have a multi-driver conflict with spi_slave.
-    register_file reg_file_inst (
-        .clk         (clk),
-        .rst_n       (rst_n_sync),
-        .reg_addr    (reg_addr),
-        .reg_wdata   (reg_wdata),
-        .reg_wr      (reg_wr),
-        .reg_rdata   (reg_rdata),
-        .reg_rd      (reg_rd),
-        .led_out     (led_from_regs),
-        .sw_in       (sw),
-        .spi_active  (spi_active),
-        .spi_rx_byte (spi_rx_byte) 
-    );
-    
-    // SPI init.
+
+    // --- Instantiate SPI Slave ---
     spi_slave spi_inst (
-        .clk            (clk),
-        .sclk           (spi_sclk),
-        .cs             (spi_cs),
-        .mosi           (spi_mosi),
-        .miso           (spi_miso),
-        .data_received  (spi_rx_byte)
+        .clk(clk),
+        .sclk(sclk),
+        .cs(cs),
+        .mosi(mosi),
+        .miso(miso),
+        .data_received()     // Connect this to memory if you want Loopback later
     );
-    
-    assign spi_active = ~spi_cs;
-    
-    // 7-seg init. 
-    seven_seg disp_inst (
-        .clk    (clk),
-        .number ({8'h00, spi_rx_byte}),  
-        .seg    (seg),
-        .an     (an)
-    );
-    
-    assign led = led_from_regs;
-    
+
 endmodule

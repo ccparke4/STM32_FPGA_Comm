@@ -1,5 +1,6 @@
 module spi_slave(
     input   logic       clk,            // 100MHz sys clk
+    input   logic       rst_n,          // reset
     input   logic       sclk,           // SPI clk
     input   logic       cs,             // Chip select
     input   logic       mosi,           // Master Out Slave In
@@ -7,14 +8,21 @@ module spi_slave(
     output  logic [7:0] data_received   // Data to display
     );
     
-    // --- Syncronization ----
+    // --- Synchronization ----
     logic [2:0] sclk_sync, cs_sync;
     logic [1:0] mosi_sync;
     
-    always_ff @(posedge clk) begin 
-        sclk_sync <= {sclk_sync[1:0], sclk};
-        cs_sync   <= {cs_sync[1:0], cs};
-        mosi_sync <= {mosi_sync[0], mosi};
+    // Fix #1: Add Reset to Synchronizers
+    always_ff @(posedge clk or negedge rst_n) begin 
+        if (!rst_n) begin
+            sclk_sync <= 3'b000;
+            cs_sync   <= 3'b111; // Default to inactive (High)
+            mosi_sync <= 2'b00;
+        end else begin
+            sclk_sync <= {sclk_sync[1:0], sclk};
+            cs_sync   <= {cs_sync[1:0], cs};
+            mosi_sync <= {mosi_sync[0], mosi};
+        end
     end
     
     // Edge detection
@@ -29,13 +37,14 @@ module spi_slave(
     logic [7:0] last_byte;          // persist - 0x00 state issues last version       
     logic [2:0] bit_cnt;
     
-    // Init. last_byte to 0 on powerup
-    initial begin
-        last_byte = 8'h00;
-    end
-    
-    always_ff @(posedge clk) begin
-        if (cs_falling) begin
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            shift_in      <= 8'h00;
+            shift_out     <= 8'h00;
+            last_byte     <= 8'h00;
+            bit_cnt       <= 3'd0;
+            data_received <= 8'h00;
+        end else if (cs_falling) begin
             // CS just went active - ld prev. byte to Tx
             shift_out <= last_byte;
             bit_cnt   <= 3'd0;
@@ -44,31 +53,23 @@ module spi_slave(
             bit_cnt  <= 3'd0;
         end else begin
             // --- SPI Mode 1 Implementation ---
-            // Logic: Shift MISO on Rising, Sample MOSI on Falling
             if (sclk_rising) begin
-                // FIX - Don't shift on very first bit
-                // CPHA, 1st bit must be valid before 1st clock
-                // we load 'shift_out' at CS_falling (burst reload)
-                // bit 7 already on wire. Shifting now loses MSB
+                // Don't shift on very first bit (CPHA)
                 if (bit_cnt != 3'd0) begin
-                    shift_out   <= {shift_out[6:0], 1'b0};
+                    shift_out <= {shift_out[6:0], 1'b0};
                 end
             end
             
-            // Sample MOSI on FALLING edge (stable data)
+            // Sample MOSI on FALLING edge
             if (sclk_falling) begin
                 shift_in <= {shift_in[6:0], mosi_sync[1]};
                 bit_cnt  <= bit_cnt + 1;
                 
-                // byte cplt?
+                // byte complete?
                 if (bit_cnt == 3'd7) begin
-                    // save Rx 
                     last_byte     <= {shift_in[6:0], mosi_sync[1]};
                     data_received <= {shift_in[6:0], mosi_sync[1]};
-                    
-                    // FIX - burst mode issue, reload immediately w/ new byte?
-                    // ensures new MSB is ready on the wire
-                    // Next rising edge of next byte
+                    // Burst mode: ready next byte immediately
                     shift_out     <= {shift_in[6:0], mosi_sync[1]};
                 end
             end

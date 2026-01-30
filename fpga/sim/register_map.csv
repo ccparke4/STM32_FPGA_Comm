@@ -1,0 +1,20 @@
+Address,Name,Access,Description
+0x00,ADDR_DEVICE_ID,RO,Device ID (Fixed 0xA7)
+0x01,ADDR_VERSION_MAJ,RO,Major Version
+0x02,ADDR_VERSION_MIN,RO,Minor Version
+0x03,ADDR_SYS_STATUS,RO,System Status [7:I2C 6:SPI 5:ERR]
+0x04,ADDR_SYS_CTRL,RW,System Control
+0x05,ADDR_SCRATCH_0,RW,Scratchpad 0
+0x06,ADDR_SCRATCH_1,RW,Scratchpad 1
+0x10,ADDR_LINK_CAPS,RO,Link Capabilities
+0x11,ADDR_DATA_MODE,RW,Data Plane Mode
+0x12,ADDR_DATA_CLK,RW,Data Plane Clock Div
+0x13,ADDR_DATA_STATUS,RO,Data Plane Status
+0x14,ADDR_DATA_ERR,RO,Data Plane Error Count
+0x15,ADDR_DATA_TEST,RO,SPI Debug Readback
+0x20,ADDR_LED_OUT,RW,LED Output [7:0]
+0x21,ADDR_LED_OUT_H,RW,Extended LED Output
+0x22,ADDR_SW_IN,RO,Switch Input [7:0]
+0x23,ADDR_SW_IN_H,RO,Extended Switch Input
+0x24,ADDR_SEG_DATA,RW,7-Segment Data
+0x25,ADDR_SEG_CTRL,RW,7-Segment Control

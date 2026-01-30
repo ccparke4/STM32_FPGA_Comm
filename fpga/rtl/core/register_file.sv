@@ -109,7 +109,6 @@ module register_file(
     logic [7:0] scratch1;
     logic [7:0] data_mode;
     logic [7:0] data_clk_div;
-    logic [7:0] data_test;
     logic [7:0] led_reg;
     logic [7:0] led_reg_h;
     logic [7:0] seg_data;
@@ -175,7 +174,6 @@ module register_file(
             ADDR_DATA_CLK:      reg_rdata = data_clk_div;
             ADDR_DATA_STATUS:   reg_rdata = {spi_active, 7'b0000000};
             ADDR_DATA_ERR:      reg_rdata = error_count;
-            ADDR_DATA_TEST:     reg_rdata = data_test;
             
             // gpio regs 0x20-0x2F
             ADDR_LED_OUT:     reg_rdata = led_reg;
