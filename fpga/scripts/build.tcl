@@ -5,24 +5,33 @@ set project_name "fpga_comm"
 set part_number "xc7a35tcpg236-1"
 set top_module "top"
 
-# Create Project
-create_project $project_name ./vivado_project -part $part_number -force
+# config
+set outputDir ./build_output
+file mkdir $outputDir
+set_part xc7a35tcpg236-1
+set_property target_language Verilog [current_project]
 
-# add source files
-add_files -norecurse {
-	../src/top.sv
-	../src/spi_slave.sv
-	../src/seven_seg.sv
-}
+# read sources 
+read_verilog -sv [glob ../rtl/*.sv]
+read_verilog -sv [glob ../rtl/interface/*.sv]
+read_verilog -sv [glob ../rtl/core/*.sv]
+# xdc... may use gui for this
+# read_xdc ../constraints/pins.xdc
 
-# add constraints
-add_files -fileset constrs_1 -norecurse ../constraints/basys3_Master.xdc
+# 3. Synthesis
+puts "\[TCL\] Running Synthesis..."
+synth_design -top top -flatten_hierarchy rebuilt
+write_checkpoint -force $outputDir/post_synth.dcp
 
-# set top module
-set_property top $top_module [current_fileset]
+# 4. opt & place
+puts "\[TCL\] Running Optimization & Placement..."
+opt_design
+place_design
 
-# compiler order
-update_compiler_order -fileset sources_1
+# 5. Routing
+puts "\[TCL\] Running routing..."
+route_design
 
-puts "Project created successfully!"
-puts "Run 'launch_runs impl_1 -to_step write_bitstream' to build"
+# 6. Report GEN
+
+# Hierarchle utilization - tells exactly which module 

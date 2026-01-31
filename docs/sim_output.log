@@ -1,0 +1,363 @@
+#-----------------------------------------------------------
+# xsim v2025.2 (64-bit)
+# SW Build 6299465 on Fri Nov 14 19:35:11 GMT 2025
+# IP Build 6300035 on Fri Nov 14 10:48:45 MST 2025
+# SharedData Build 6298862 on Thu Nov 13 04:50:51 MST 2025
+# Start of session at: Sat Jan 31 06:00:11 2026
+# Process ID         : 7132
+# Current directory  : C:/Users/trey/STM32_FPGA_Comm/fpga/sim/build
+# Command line       : xsim.exe -log simulation.log -mode tcl -source {xsim.dir/sim_snapshot/xsim_script.tcl}
+# Log file           : C:/Users/trey/STM32_FPGA_Comm/fpga/sim/build/simulation.log
+# Journal file       : C:/Users/trey/STM32_FPGA_Comm/fpga/sim/build\xsim.jou
+# Running On         : WIN-7JUBIUKVLR9
+# Platform           : Windows Server 2016 or Windows 10
+# Operating System   : 26200
+# Processor Detail   : virt-7.2
+# CPU Frequency      : 1000 MHz
+# CPU Physical cores : 8
+# CPU Logical cores  : 8
+# Host memory        : 17170 MB
+# Swap memory        : 1073 MB
+# Total Virtual      : 18243 MB
+# Available Virtual  : 9844 MB
+#-----------------------------------------------------------
+source xsim.dir/sim_snapshot/xsim_script.tcl
+# xsim {sim_snapshot} -testplusarg TEST=all -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+
+[TB] Starting test: all
+[TB] Applying reset...
+[TB] Reset complete, starting tests...
+
+
+========== TEST: I2C Basic Write/Read ==========
+
+[TB] I2C WRITE addr=0x05 data=0xab - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0xab - OK
+[TB] I2C WRITE addr=0x06 data=0xcd - OK
+[SCOREBOARD] I2C WRITE: addr=0x06 data=0xcd - OK
+[TB] I2C READ  addr=0x05 data=0xab - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0xab got=0xab - MATCH
+[TB] I2C READ  addr=0x06 data=0xcd - OK
+[SCOREBOARD] I2C READ:  addr=0x06 exp=0xcd got=0xcd - MATCH
+[TB] I2C WRITE addr=0x20 data=0x55 - OK
+[SCOREBOARD] I2C WRITE: addr=0x20 data=0x55 - OK
+[TB] I2C READ  addr=0x20 data=0x55 - OK
+
+========== TEST: I2C Read-Only Registers ==========
+
+[SCOREBOARD] I2C READ:  addr=0x20 exp=0x55 got=0x55 - MATCH
+[TB] I2C READ  addr=0x00 data=0xa7 - OK
+[SCOREBOARD] I2C READ:  addr=0x00 exp=0xa7 got=0xa7 - MATCH
+[TB] I2C READ  addr=0x01 data=0x01 - OK
+[SCOREBOARD] I2C READ:  addr=0x01 exp=0x01 got=0x01 - MATCH
+[TB] I2C READ  addr=0x02 data=0x00 - OK
+[SCOREBOARD] I2C READ:  addr=0x02 exp=0x00 got=0x00 - MATCH
+[TB] I2C READ  addr=0x10 data=0x15 - OK
+
+========== TEST: SPI Loopback ==========
+
+[SCOREBOARD] I2C READ:  addr=0x10 exp=0x15 got=0x15 - MATCH
+[SPI BFM Error] Time            881495000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[SPI BFM Error] Time            881705000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[SPI BFM Error] Time            881915000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[SPI BFM Error] Time            882125000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[SPI BFM Error] Time            882335000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[SPI BFM Error] Time            882545000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[SPI BFM Error] Time            882755000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[SPI BFM Error] Time            882965000: Sampled 'X' on MISO! Check Slave Reset/Initialization.
+[TB] SPI XFER  tx=0x00 rx=0xxx
+[SCOREBOARD] SPI XFER:  tx=0x00 rx=0xxx exp=0x00 - *** MISMATCH ***
+[TB] SPI XFER  tx=0xaa rx=0x00
+[SCOREBOARD] SPI XFER:  tx=0xaa rx=0x00 exp=0x00 - MATCH
+[TB] SPI XFER  tx=0x55 rx=0xaa
+[SCOREBOARD] SPI XFER:  tx=0x55 rx=0xaa exp=0xaa - MATCH
+[TB] SPI XFER  tx=0xff rx=0x55
+[SCOREBOARD] SPI XFER:  tx=0xff rx=0x55 exp=0x55 - MATCH
+[TB] SPI XFER  tx=0x12 rx=0xff
+[SCOREBOARD] SPI XFER:  tx=0x12 rx=0xff exp=0xff - MATCH
+[TB] SPI XFER  tx=0x34 rx=0x12
+[SCOREBOARD] SPI XFER:  tx=0x34 rx=0x12 exp=0x12 - MATCH
+[TB] SPI XFER  tx=0x56 rx=0x34
+[SCOREBOARD] SPI XFER:  tx=0x56 rx=0x34 exp=0x34 - MATCH
+[TB] SPI XFER  tx=0x78 rx=0x56
+
+========== TEST: Concurrent I2C + SPI ==========
+
+[SCOREBOARD] SPI XFER:  tx=0x78 rx=0x56 exp=0x56 - MATCH
+[TB] SPI XFER  tx=0x00 rx=0x78
+[SCOREBOARD] SPI XFER:  tx=0x00 rx=0x78 exp=0x78 - MATCH
+[TB] SPI XFER  tx=0x01 rx=0x00
+[SCOREBOARD] SPI XFER:  tx=0x01 rx=0x00 exp=0x00 - MATCH
+[TB] SPI XFER  tx=0x02 rx=0x01
+[SCOREBOARD] SPI XFER:  tx=0x02 rx=0x01 exp=0x01 - MATCH
+[TB] SPI XFER  tx=0x03 rx=0x02
+[SCOREBOARD] SPI XFER:  tx=0x03 rx=0x02 exp=0x02 - MATCH
+[TB] SPI XFER  tx=0x04 rx=0x03
+[SCOREBOARD] SPI XFER:  tx=0x04 rx=0x03 exp=0x03 - MATCH
+[TB] SPI XFER  tx=0x05 rx=0x04
+[SCOREBOARD] SPI XFER:  tx=0x05 rx=0x04 exp=0x04 - MATCH
+[TB] SPI XFER  tx=0x06 rx=0x05
+[SCOREBOARD] SPI XFER:  tx=0x06 rx=0x05 exp=0x05 - MATCH
+[TB] SPI XFER  tx=0x07 rx=0x06
+[SCOREBOARD] SPI XFER:  tx=0x07 rx=0x06 exp=0x06 - MATCH
+[TB] SPI XFER  tx=0x08 rx=0x07
+[SCOREBOARD] SPI XFER:  tx=0x08 rx=0x07 exp=0x07 - MATCH
+[TB] SPI XFER  tx=0x09 rx=0x08
+[SCOREBOARD] SPI XFER:  tx=0x09 rx=0x08 exp=0x08 - MATCH
+[TB] SPI XFER  tx=0x0a rx=0x09
+[SCOREBOARD] SPI XFER:  tx=0x0a rx=0x09 exp=0x09 - MATCH
+[TB] SPI XFER  tx=0x0b rx=0x0a
+[SCOREBOARD] SPI XFER:  tx=0x0b rx=0x0a exp=0x0a - MATCH
+[TB] SPI XFER  tx=0x0c rx=0x0b
+[SCOREBOARD] SPI XFER:  tx=0x0c rx=0x0b exp=0x0b - MATCH
+[TB] SPI XFER  tx=0x0d rx=0x0c
+[SCOREBOARD] SPI XFER:  tx=0x0d rx=0x0c exp=0x0c - MATCH
+[TB] SPI XFER  tx=0x0e rx=0x0d
+[SCOREBOARD] SPI XFER:  tx=0x0e rx=0x0d exp=0x0d - MATCH
+[TB] SPI XFER  tx=0x0f rx=0x0e
+[SCOREBOARD] SPI XFER:  tx=0x0f rx=0x0e exp=0x0e - MATCH
+[TB] SPI XFER  tx=0x10 rx=0x0f
+[SCOREBOARD] SPI XFER:  tx=0x10 rx=0x0f exp=0x0f - MATCH
+[TB] SPI XFER  tx=0x11 rx=0x10
+[SCOREBOARD] SPI XFER:  tx=0x11 rx=0x10 exp=0x10 - MATCH
+[TB] SPI XFER  tx=0x12 rx=0x11
+[SCOREBOARD] SPI XFER:  tx=0x12 rx=0x11 exp=0x11 - MATCH
+[TB] SPI XFER  tx=0x13 rx=0x12
+[SCOREBOARD] SPI XFER:  tx=0x13 rx=0x12 exp=0x12 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x00 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x00 - OK
+[TB] I2C READ  addr=0x05 data=0x00 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x00 got=0x00 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x01 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x01 - OK
+[TB] I2C READ  addr=0x05 data=0x01 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x01 got=0x01 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x02 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x02 - OK
+[TB] I2C READ  addr=0x05 data=0x02 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x02 got=0x02 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x03 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x03 - OK
+[TB] I2C READ  addr=0x05 data=0x03 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x03 got=0x03 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x04 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x04 - OK
+[TB] I2C READ  addr=0x05 data=0x04 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x04 got=0x04 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x05 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x05 - OK
+[TB] I2C READ  addr=0x05 data=0x05 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x05 got=0x05 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x06 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x06 - OK
+[TB] I2C READ  addr=0x05 data=0x06 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x06 got=0x06 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x07 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x07 - OK
+[TB] I2C READ  addr=0x05 data=0x07 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x07 got=0x07 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x08 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x08 - OK
+[TB] I2C READ  addr=0x05 data=0x08 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x08 got=0x08 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x09 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x09 - OK
+[TB] I2C READ  addr=0x05 data=0x09 - OK
+[TB] Concurrent test: I2C errors=0, SPI errors=1
+
+========== TEST: Stress Test ==========
+
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x09 got=0x09 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x00 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x00 - OK
+[TB] I2C READ  addr=0x05 data=0x00 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x00 got=0x00 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x01 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x01 - OK
+[TB] I2C READ  addr=0x05 data=0x01 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x01 got=0x01 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x02 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x02 - OK
+[TB] I2C READ  addr=0x05 data=0x02 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x02 got=0x02 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x03 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x03 - OK
+[TB] I2C READ  addr=0x05 data=0x03 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x03 got=0x03 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x04 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x04 - OK
+[TB] I2C READ  addr=0x05 data=0x04 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x04 got=0x04 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x05 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x05 - OK
+[TB] I2C READ  addr=0x05 data=0x05 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x05 got=0x05 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x06 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x06 - OK
+[TB] I2C READ  addr=0x05 data=0x06 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x06 got=0x06 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x07 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x07 - OK
+[TB] I2C READ  addr=0x05 data=0x07 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x07 got=0x07 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x08 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x08 - OK
+[TB] I2C READ  addr=0x05 data=0x08 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x08 got=0x08 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x09 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x09 - OK
+[TB] I2C READ  addr=0x05 data=0x09 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x09 got=0x09 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x0a - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x0a - OK
+[TB] I2C READ  addr=0x05 data=0x0a - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0a got=0x0a - MATCH
+[TB] I2C WRITE addr=0x05 data=0x0b - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x0b - OK
+[TB] I2C READ  addr=0x05 data=0x0b - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0b got=0x0b - MATCH
+[TB] I2C WRITE addr=0x05 data=0x0c - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x0c - OK
+[TB] I2C READ  addr=0x05 data=0x0c - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0c got=0x0c - MATCH
+[TB] I2C WRITE addr=0x05 data=0x0d - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x0d - OK
+[TB] I2C READ  addr=0x05 data=0x0d - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0d got=0x0d - MATCH
+[TB] I2C WRITE addr=0x05 data=0x0e - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x0e - OK
+[TB] I2C READ  addr=0x05 data=0x0e - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0e got=0x0e - MATCH
+[TB] I2C WRITE addr=0x05 data=0x0f - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x0f - OK
+[TB] I2C READ  addr=0x05 data=0x0f - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x0f got=0x0f - MATCH
+[TB] I2C WRITE addr=0x05 data=0x10 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x10 - OK
+[TB] I2C READ  addr=0x05 data=0x10 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x10 got=0x10 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x11 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x11 - OK
+[TB] I2C READ  addr=0x05 data=0x11 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x11 got=0x11 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x12 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x12 - OK
+[TB] I2C READ  addr=0x05 data=0x12 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x12 got=0x12 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x13 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x13 - OK
+[TB] I2C READ  addr=0x05 data=0x13 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x13 got=0x13 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x14 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x14 - OK
+[TB] I2C READ  addr=0x05 data=0x14 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x14 got=0x14 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x15 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x15 - OK
+[TB] I2C READ  addr=0x05 data=0x15 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x15 got=0x15 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x16 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x16 - OK
+[TB] I2C READ  addr=0x05 data=0x16 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x16 got=0x16 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x17 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x17 - OK
+[TB] I2C READ  addr=0x05 data=0x17 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x17 got=0x17 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x18 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x18 - OK
+[TB] I2C READ  addr=0x05 data=0x18 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x18 got=0x18 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x19 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x19 - OK
+[TB] I2C READ  addr=0x05 data=0x19 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x19 got=0x19 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x1a - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x1a - OK
+[TB] I2C READ  addr=0x05 data=0x1a - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1a got=0x1a - MATCH
+[TB] I2C WRITE addr=0x05 data=0x1b - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x1b - OK
+[TB] I2C READ  addr=0x05 data=0x1b - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1b got=0x1b - MATCH
+[TB] I2C WRITE addr=0x05 data=0x1c - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x1c - OK
+[TB] I2C READ  addr=0x05 data=0x1c - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1c got=0x1c - MATCH
+[TB] I2C WRITE addr=0x05 data=0x1d - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x1d - OK
+[TB] I2C READ  addr=0x05 data=0x1d - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1d got=0x1d - MATCH
+[TB] I2C WRITE addr=0x05 data=0x1e - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x1e - OK
+[TB] I2C READ  addr=0x05 data=0x1e - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1e got=0x1e - MATCH
+[TB] I2C WRITE addr=0x05 data=0x1f - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x1f - OK
+[TB] I2C READ  addr=0x05 data=0x1f - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x1f got=0x1f - MATCH
+[TB] I2C WRITE addr=0x05 data=0x20 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x20 - OK
+[TB] I2C READ  addr=0x05 data=0x20 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x20 got=0x20 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x21 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x21 - OK
+[TB] I2C READ  addr=0x05 data=0x21 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x21 got=0x21 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x22 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x22 - OK
+[TB] I2C READ  addr=0x05 data=0x22 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x22 got=0x22 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x23 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x23 - OK
+[TB] I2C READ  addr=0x05 data=0x23 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x23 got=0x23 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x24 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x24 - OK
+[TB] I2C READ  addr=0x05 data=0x24 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x24 got=0x24 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x25 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x25 - OK
+[TB] I2C READ  addr=0x05 data=0x25 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x25 got=0x25 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x26 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x26 - OK
+[TB] I2C READ  addr=0x05 data=0x26 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x26 got=0x26 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x27 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x27 - OK
+[TB] I2C READ  addr=0x05 data=0x27 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x27 got=0x27 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x28 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x28 - OK
+[TB] I2C READ  addr=0x05 data=0x28 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x28 got=0x28 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x29 - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x29 - OK
+[TB] I2C READ  addr=0x05 data=0x29 - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x29 got=0x29 - MATCH
+[TB] I2C WRITE addr=0x05 data=0x2a - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x2a - OK
+[TB] I2C READ  addr=0x05 data=0x2a - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x2a got=0x2a - MATCH
+[TB] I2C WRITE addr=0x05 data=0x2b - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x2b - OK
+[TB] I2C READ  addr=0x05 data=0x2b - OK
+[SCOREBOARD] I2C READ:  addr=0x05 exp=0x2b got=0x2b - MATCH
+[TB] I2C WRITE addr=0x05 data=0x2c - OK
+[SCOREBOARD] I2C WRITE: addr=0x05 data=0x2c - OK
+
+[TB] *** TIMEOUT ***
+
+[SCOREBOARD] ============ Final Summary ============
+[SCOREBOARD] I2C Transactions: 119
+[SCOREBOARD] SPI Transactions: 28
+[SCOREBOARD] Total Errors:     1
+[SCOREBOARD] =========================================
+$finish called at time : 10 ms : File "C:/Users/trey/STM32_FPGA_Comm/fpga/sim/tb_top.sv" Line 536
+run: Time (s): cpu = 00:00:03 ; elapsed = 00:00:45 . Memory (MB): peak = 268.957 ; gain = 0.543
+exit
+INFO: xsimkernel Simulation Memory Usage: 22908 KB (Peak: 22908 KB), Simulation CPU Usage: 42703 ms
+INFO: [Common 17-206] Exiting xsim at Sat Jan 31 06:01:20 2026...
