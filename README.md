@@ -15,7 +15,7 @@
 | **SPI Slave** | Data plane interface (Mode 1, CPHA=1). Hardware shift guards. | [`rtl/bus/spi_slave.sv`](fpga/rtl/bus/spi_slave.sv) |
 | **Register File** | Memory-mapped configuration space. | [`rtl/core/register_file.sv`](fpga/rtl/core/register_file.sv) |
 
-📄 **[Read the Full System Specification](adaptive_link_spec.md)** *(Register Map & Protocols)*
+**[System Specification](docs/Technical_Report.md)** *(Register Map & Protocols)*
 
 ## Verification (Phase 2 Complete)
 The FPGA core is verified using a UVM-style Python/SystemVerilog testbench.
