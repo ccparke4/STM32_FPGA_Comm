@@ -1,31 +1,125 @@
+# FPGA Synthesis & Implementation Report
 
-# FPGA Design Report
-**Device:** XC7A35T (Basys 3)
+**Project:** stm32_fpga_bridge  
+**Device:** xc7a35tcpg236-1 (Basys 3)  
+**Top Module:** top  
+**Clock:** 10.0 ns (100 MHz)
 
-## 1. High-Level Metrics
+---
+
+## Executive Summary
+
 | Metric | Value | Status |
-| :--- | :--- | :--- |
-| **Max Frequency** | **210.2 MHz** | - |
-| **Setup Slack** | 5.242 ns | [PASS] |
-| **Hold Slack** | 0.127 ns | [PASS] |
-| **Power** | 0.071 W | - |
+|--------|-------|--------|
+| **Max Frequency** | **225.2 MHz** | Large Headroom |
+| **Setup Slack (WNS)** | 5.559 ns | PASS |
+| **Hold Slack (WHS)** | 0.149 ns | PASS |
+| **LUT Usage** | 0.62% | Good |
+| **Total Power** | 0.076 W | estimated |
 
-## 2. Resource Utilization
-| Resource | Synth | Impl | Limit | Utilization |
-| :--- | :--- | :--- | :--- | :--- |
-| **LUT** | 0 | 65 | 20800 | 0.3% |
-| **FF** | 53 | 53 | 41600 | 0.1% |
-| **BRAM** | 0.5 | 0.5 | 50 | 1.0% |
-| **DSP** | 0 | 0 | 90 | 0.0% |
+---
 
-## 3. Logic Primitives Breakdown
-This section details specific hardware primitives used (Hardware-level analysis).
+## 1. Resource Utilization
 
-| Primitive | Count | Purpose |
-| :--- | :--- | :--- |
-| **MUXF7** | 0 | Used to combine 2 LUTs (for 5-8 input functions). |
-| **MUXF8** | 0 | Used to combine 2 MUXF7s (for larger muxes). |
-| **CARRY4** | 0 | Dedicated Fast Carry Logic for adders/counters. |
+### 1.1 Summary
 
-![Dashboard](charts/design_dashboard.png)
-    
+| Resource | Synthesis | Implementation | Available | Utilization |
+|----------|-----------|----------------|-----------|-------------|
+| **Slice LUTs** | 129 | 128 | 20,800 | 0.62% |
+| **Slice Registers** | 145 | 153 | 41,600 | 0.37% |
+| **Block RAM** | 0.0 | 0.0 | 50 | 0.00% |
+| **DSP48E1** | 0 | 0 | 90 | 0.00% |
+| **Bonded IOB** | 33 | 33 | 106 | 31.13% |
+| **BUFG** | 1 | 1 | 32 | 3.12% |
+
+### 1.2 Logic Primitives
+
+| Primitive | Synthesis | Implementation | Purpose |
+|-----------|-----------|----------------|---------|
+| **LUT as Logic** | 129 | 128 | Combinational logic |
+| **LUT as Memory** | 0 | 0 | Distributed RAM |
+| **MUXF7** | 0 | 0 | Wide muxes (7-8 inputs) |
+| **MUXF8** | 0 | 0 | Wider muxes |
+| **CARRY4** | 5 | 5 | Fast carry chains |
+
+---
+
+## 2. Per-Module Breakdown
+
+| Instance | Module | LUTs | FFs | % of Total |
+|----------|--------|------|-----|------------|
+| `top` | (top) | 128 | 128 | 39.4% |
+| `i2c_inst` | i2c_slave | 114 | 114 | 35.1% |
+| `(i2c_inst)` | i2c_slave | 72 | 72 | 22.2% |
+| `reg_file_inst` | register_file | 11 | 11 | 3.4% |
+| `(top)` | (top) | 0 | 0 | 0.0% |
+
+
+![Module Distribution](charts/module_distribution.png)
+
+---
+
+## 3. Timing Analysis
+
+### 3.1 Summary
+
+| Metric | Value |
+|--------|-------|
+| **Clock Period** | 10.0 ns |
+| **Setup Slack (WNS)** | 5.559 ns |
+| **Hold Slack (WHS)** | 0.149 ns |
+| **Max Achievable Freq** | 225.2 MHz |
+| **Timing Margin** | 125% over 100 MHz |
+
+### 3.2 Critical Path
+
+| Property | Value |
+|----------|-------|
+| **Slack** | 5.559 ns |
+| **Logic Levels** | N/A |
+| **Start Point** | `N/A...` |
+| **End Point** | `N/A...` |
+
+---
+
+## 4. Power Analysis
+
+| Category | Power (W) |
+|----------|-----------|
+| **Dynamic** | 0.005 |
+| **Static** | 0.072 |
+| **Total** | **0.076** |
+
+---
+
+## 5. Build Information
+
+| Metric | Value |
+|--------|-------|
+| **Synthesis Time** | 83 sec |
+| **Implementation Time** | 59 sec |
+| **Total Build Time** | 142 sec |
+
+---
+
+## 6. Design Quality
+
+### Strengths
+- **56% timing margin** on critical path
+- **99% LUTs available** for Core IP expansion
+- **Low power** (76 mW) - suitable for embedded applications
+
+### Resource Headroom
+
+| Future Feature | Est. LUTs | After Addition |
+|----------------|-----------|----------------|
+| DMA Engine | ~500 | 3.02% |
+| Packet Processor | ~300 | 4.46% |
+| Hardware CRC | ~100 | 4.94% |
+
+---
+
+![Design Dashboard](charts/design_dashboard.png)
+
+---
+*Generated automatically from Vivado reports*

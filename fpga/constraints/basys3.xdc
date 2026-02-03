@@ -22,33 +22,33 @@ set_property IOSTANDARD LVCMOS33 [get_ports rst_n]
 ## External 4.7k pull-ups REQUIRED on SDA and SCL lines
 ## -----------------------------------------------------------------------------
 ## JB1 - SCL (directly directly directly directly directly directly to Pmod pin 1)
-set_property PACKAGE_PIN A14 [get_ports scl]
-set_property IOSTANDARD LVCMOS33 [get_ports scl]
+set_property PACKAGE_PIN A14 [get_ports i2c_scl]
+set_property IOSTANDARD LVCMOS33 [get_ports i2c_scl]
 
 ## JB2 - SDA (directly to Pmod pin 2) - Directly to Pmod pin 2) - BIDIRECTIONAL
 ## Note: Top module must use IOBUF or inout port
-set_property PACKAGE_PIN A16 [get_ports sda]
-set_property IOSTANDARD LVCMOS33 [get_ports sda]
+set_property PACKAGE_PIN A16 [get_ports i2c_sda]
+set_property IOSTANDARD LVCMOS33 [get_ports i2c_sda]
 
 ## -----------------------------------------------------------------------------
 ## SPI Data Plane (JA Pmod Header)
 ## directly to Pmod pins 1-4
 ## -----------------------------------------------------------------------------
 ## JA1 - CS (Directly to Pmod pin 1) - Chip Select (active low)
-set_property PACKAGE_PIN J1 [get_ports cs]
-set_property IOSTANDARD LVCMOS33 [get_ports cs]
+set_property PACKAGE_PIN J1 [get_ports spi_cs]
+set_property IOSTANDARD LVCMOS33 [get_ports spi_cs]
 
 ## JA2 - MOSI (Directly to Pmod pin 2) - Master Out Slave In
-set_property PACKAGE_PIN L2 [get_ports mosi]
-set_property IOSTANDARD LVCMOS33 [get_ports mosi]
+set_property PACKAGE_PIN L2 [get_ports spi_mosi]
+set_property IOSTANDARD LVCMOS33 [get_ports spi_mosi]
 
 ## JA3 - MISO (Directly to Pmod pin 3) - Master In Slave Out
 set_property PACKAGE_PIN J2 [get_ports spi_miso]
-set_property IOSTANDARD LVCMOS33 [get_ports miso]
+set_property IOSTANDARD LVCMOS33 [get_ports spi_miso]
 
 ## JA4 - SCLK (Directly to Pmod pin 4) - Serial Clock
-set_property PACKAGE_PIN G2 [get_ports sclk]
-set_property IOSTANDARD LVCMOS33 [get_ports sclk]
+set_property PACKAGE_PIN G2 [get_ports spi_sclk]
+set_property IOSTANDARD LVCMOS33 [get_ports spi_sclk]
 
 ## -----------------------------------------------------------------------------
 ## LEDs [7:0]
@@ -113,15 +113,15 @@ set_property IOSTANDARD LVCMOS33 [get_ports {an[*]}]
 ## -----------------------------------------------------------------------------
 
 ## SPI signals - async to sys_clk
-set_false_path -from [get_ports sclk]
-set_false_path -from [get_ports cs]
-set_false_path -from [get_ports mosi]
-set_false_path -to [get_ports miso]
+set_false_path -from [get_ports spi_sclk]
+set_false_path -from [get_ports spi_cs]
+set_false_path -from [get_ports spi_mosi]
+set_false_path -to [get_ports spi_miso]
 
 ## I2C signals - async to sys_clk
-set_false_path -from [get_ports scl]
-set_false_path -from [get_ports sda]
-set_false_path -to [get_ports sda]
+set_false_path -from [get_ports i2c_scl]
+set_false_path -from [get_ports i2c_sda]
+set_false_path -to [get_ports i2c_sda]
 
 ## -----------------------------------------------------------------------------
 ## Slow/Non-Critical Outputs

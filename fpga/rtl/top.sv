@@ -4,15 +4,15 @@ module top (
     input  logic       clk,      // System Clock
     input  logic       rst_n,    // Active Low Reset
     
-    // --- Physical I2C Pins ---
-    input  logic       scl,      // SCL is Input only for Slave (unless clock stretching)
-    inout  wire        sda,      // SDA is Bidirectional (In/Out)
+    // --- Physical I2C Pins (JB) ---
+    input  logic       i2c_scl,      // SCL is Input only for Slave (unless clock stretching)
+    inout  wire        i2c_sda,      // SDA is Bidirectional (In/Out)
     
-    // --- Physical SPI Pins ---
-    input  logic       sclk,
-    input  logic       cs,
-    input  logic       mosi,
-    output logic       miso,
+    // --- Physical SPI Pins (JA) ---
+    input  logic       spi_sclk,
+    input  logic       spi_cs,
+    input  logic       spi_mosi,
+    output logic       spi_miso,
 
     // --- IO ---
     input  logic [7:0] sw,      // Switches
@@ -39,7 +39,7 @@ module top (
     assign i2c_sda = (sda_oe) ? 1'b0 : 1'bz;
 
     // Activ status for register file
-    assign spi_active = !cs;
+    assign spi_active = !spi_cs;
 
     // --- Instantiate I2C Slave ---
     i2c_slave #(
@@ -47,11 +47,11 @@ module top (
     ) i2c_inst (
         .clk(clk),
         .rst_n(rst_n),
-        .scl_i(scl),         // Connect to Pin
+        .scl_i(i2c_scl),         // Connect to Pin
         .sda_i(sda_i),       // Connect to Input Wire
         .sda_o(sda_o),       // Connect to Output Wire
         .sda_oe(sda_oe),     // Connect to Output Enable
-        
+        // Register interface
         .reg_addr(reg_addr),
         .reg_wdata(reg_wdata),
         .reg_wr(reg_wr),
@@ -61,12 +61,13 @@ module top (
 
     // --- Instantiate SPI Slave ---
     spi_slave spi_inst (
-        .clk(clk),
-        .sclk(sclk),
-        .cs(cs),
-        .mosi(mosi),
-        .miso(miso),
-        .data_received()     // Connect this to memory if you want Loopback later
+        .clk            (clk),
+        .rst_n          (rst_n_sync),      // <-- ADD THIS!
+        .sclk           (spi_sclk),
+        .cs             (spi_cs),
+        .mosi           (spi_mosi),
+        .miso           (spi_miso),
+        .data_received  (dut_spi_rx_byte)
     );
 
     // --- Instantiate Register file ---
