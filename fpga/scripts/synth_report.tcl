@@ -1,20 +1,17 @@
 # Vivado synthesis & implementation automation script
 # usage:    vivado -mode batch -source synth_report.tcl
 
-# CONFIG ============================================================
 set PROJECT_NAME "stm32_fpga_bridge"
 set PART "xc7a35tcpg236-1"              ; # Basys 3
 set TOP_MODULE "top"                    ; # top module name
-set CLOCK_PERIOD 10.0                   ; # 100MHz = 10ns period
+set CLOCK_PERIOD 10.0                   ; # 100MHz
 
-# paths relative to script location
 set SCRIPT_DIR [file dirname [info script]]
 set RTL_DIR [file join $SCRIPT_DIR "../rtl"]
 set CONSTRAINT_DIR [file join $SCRIPT_DIR "../constraints"]
 set REPORT_DIR [file join $SCRIPT_DIR "../reports"]
 set BUILD_DIR [file join $SCRIPT_DIR "../build_synth"]
 
-# SRC FILES
 set RTL_SOURCES [list \
     [file join $RTL_DIR "bus/i2c_debounce.sv"] \
     [file join $RTL_DIR "bus/i2c_slave.sv"] \
@@ -23,157 +20,129 @@ set RTL_SOURCES [list \
     [file join $RTL_DIR "io/seven_seg.sv"] \
     [file join $RTL_DIR "top.sv"] \
 ]
+set CONSTRAINT_FILES [list [file join $CONSTRAINT_DIR "basys3.xdc"]]
 
-# Constraint files
-set CONSTRAINT_FILES [list \
-    [file join $CONSTRAINT_DIR "basys3.xdc"] \
-]
-
-# Create output dirs
 file mkdir $REPORT_DIR
 file mkdir $BUILD_DIR
-file mkdir [file join $REPORT_DIR "modules"]
-file mkdir [file join $REPORT_DIR "timing"]
-file mkdir [file join $REPORT_DIR "power"]
 
-# Generate timestamp
-proc timestamp {} {
-    return [clock format [clock seconds] -format "%Y-%m-%d %H:%M:%S"]
-}
-
-# --- FIX 1: Fixed write_header syntax error ---
-proc write_header {fp title} {
-    puts $fp "================================================================================"
-    puts $fp " $title"
-    puts $fp " Generated: [timestamp]"
-    puts $fp "================================================================================"
-    puts $fp ""
-}
-
-# Create project
-puts "INFO: Creating project in $BUILD_DIR"
+puts "INFO: Creating project..."
 create_project -force $PROJECT_NAME $BUILD_DIR -part $PART
-
-# Add sources
-foreach src $RTL_SOURCES {
-    if {[file exists $src]} {
-        puts "INFO: Adding source: $src"
-        add_files -norecurse $src
-    } else {
-        puts "WARNING: Source not found: $src"
-    }
-}
-
-# Add constraints
-foreach xdc $CONSTRAINT_FILES {
-    if {[file exists $xdc]} {
-        puts "INFO: Adding constraints: $xdc"
-        add_files -fileset constrs_1 -norecurse $xdc
-    }
-}
-
+foreach src $RTL_SOURCES { if {[file exists $src]} { add_files -norecurse $src } }
+foreach xdc $CONSTRAINT_FILES { if {[file exists $xdc]} { add_files -fileset constrs_1 -norecurse $xdc } }
 set_property top $TOP_MODULE [current_fileset]
 
-# RUN SYNTH
-puts "INFO: Running synth..."
+# Helper to extract values using regex
+proc extract_metric {report pattern} {
+    if {[regexp $pattern $report match val]} { return $val }
+    return 0
+}
+
+# ==============================================================================
+# PHASE 1: SYNTHESIS
+# ==============================================================================
+puts "INFO: Running Synthesis..."
 set synth_start [clock seconds]
 synth_design -top $TOP_MODULE -part $PART -flatten_hierarchy rebuilt
 set synth_end [clock seconds]
-set synth_time [expr {$synth_end - $synth_start}]
-puts "INFO: Synthesis completed in $synth_time seconds"
 
-# REPORTS
-report_utilization -file [file join $REPORT_DIR "utilization_synth.rpt"]
-report_utilization -hierarchical -file [file join $REPORT_DIR "utilization_hierarchical.rpt"]
-report_timing_summary -file [file join $REPORT_DIR "timing/timing_synth_summary.rpt"]
-report_timing -max_paths 10 -file [file join $REPORT_DIR "timing/timing_synth_paths.rpt"]
+set synth_report [report_utilization -return_string]
+set synth_lut    [extract_metric $synth_report {Slice LUTs\s*\|\s*(\d+)}]
+set synth_ff     [extract_metric $synth_report {Slice Registers\s*\|\s*(\d+)}]
+set synth_bram   [extract_metric $synth_report {Block RAM Tile\s*\|\s*(\d+(\.\d+)?)}]
+set synth_dsp    [extract_metric $synth_report {DSPs\s*\|\s*(\d+)}]
+# New Metrics
+set synth_muxf7  [extract_metric $synth_report {F7 Muxes\s*\|\s*(\d+)}]
+set synth_muxf8  [extract_metric $synth_report {F8 Muxes\s*\|\s*(\d+)}]
+set synth_carry  [extract_metric $synth_report {CARRY4\s*\|\s*(\d+)}]
 
-# Per-module utilization
-puts "INFO: Extracting per-module utilization..."
-set hier_cells [get_cells -hierarchical -filter {IS_PRIMITIVE == false}]
-set module_report [file join $REPORT_DIR "modules/module_utilization.rpt"]
-set fp [open $module_report w]
-write_header $fp "Per-Module Resource Utilization"
-puts $fp [format "%-30s %8s %8s %8s %8s" "Module" "LUTs" "FFs" "BRAM" "DSP"]
-puts $fp [string repeat "-" 70]
+set synth_wns [get_property SLACK [get_timing_paths -max_paths 1 -delay_type max]]
+if {$synth_wns == ""} { set synth_wns 0.0 }
 
-foreach cell $hier_cells {
-    set cell_name [get_property NAME $cell]
-    set prims [get_cells -hierarchical -filter "NAME =~ $cell_name/* && IS_PRIMITIVE == true"]
-    set lut_count 0
-    set ff_count 0
-    set bram_count 0
-    set dsp_count 0
-    
-    foreach prim $prims {
-        set ref [get_property REF_NAME $prim]
-        if {[string match "LUT*" $ref]} { incr lut_count }
-        if {[string match "FD*" $ref]} { incr ff_count }
-        if {[string match "RAMB*" $ref]} { incr bram_count }
-        if {[string match "DSP*" $ref]} { incr dsp_count }
-    }
-    
-    if {$lut_count > 0 || $ff_count > 0} {
-        puts $fp [format "%-30s %8d %8d %8d %8d" $cell_name $lut_count $ff_count $bram_count $dsp_count]
-    }
-}
-close $fp
-
-# RUN IMPLEMENTATION
-puts "INFO: Running implementation..."
+# ==============================================================================
+# PHASE 2: IMPLEMENTATION
+# ==============================================================================
+puts "INFO: Running Implementation..."
 set impl_start [clock seconds]
 opt_design
 place_design
 route_design
 set impl_end [clock seconds]
-set impl_time [expr {$impl_end - $impl_start}]
 
-# Final Reports
-report_utilization -file [file join $REPORT_DIR "utilization_impl.rpt"]
-report_timing_summary -file [file join $REPORT_DIR "timing/timing_impl_summary.rpt"]
-report_timing -max_paths 20 -sort_by slack -file [file join $REPORT_DIR "timing/timing_impl_paths.rpt"]
-report_power -file [file join $REPORT_DIR "power/power_estimate.rpt"]
+set impl_report [report_utilization -return_string]
+set impl_lut    [extract_metric $impl_report {Slice LUTs\s*\|\s*(\d+)}]
+set impl_ff     [extract_metric $impl_report {Slice Registers\s*\|\s*(\d+)}]
+set impl_bram   [extract_metric $impl_report {Block RAM Tile\s*\|\s*(\d+(\.\d+)?)}]
+set impl_dsp    [extract_metric $impl_report {DSPs\s*\|\s*(\d+)}]
+# New Metrics
+set impl_muxf7  [extract_metric $impl_report {F7 Muxes\s*\|\s*(\d+)}]
+set impl_muxf8  [extract_metric $impl_report {F8 Muxes\s*\|\s*(\d+)}]
+set impl_carry  [extract_metric $impl_report {CARRY4\s*\|\s*(\d+)}]
 
-# --- FIX 2: CSV Generation with Regex (Fixes the crash and missing data) ---
-puts "INFO: Generating CSV summary..."
-set csv_file [file join $REPORT_DIR "synthesis_summary.csv"]
-set fp [open $csv_file w]
-puts $fp "metric,value,unit,category"
+set impl_wns [get_property SLACK [get_timing_paths -max_paths 1 -delay_type max]]
+if {$impl_wns == ""} { set impl_wns 0.0 }
+set impl_whs [get_property SLACK [get_timing_paths -max_paths 1 -delay_type min]]
+if {$impl_whs == ""} { set impl_whs 0.0 }
 
-# Basys 3 Constants
-set lut_avail 20800
-set ff_avail  41600
-set bram_avail 50
-set dsp_avail  90
+set power_report [report_power -return_string]
+set total_power [extract_metric $power_report {\|\s*Total On-Chip Power \(W\)\s*\|\s*(\d+\.\d+)}]
 
-# Regex Parse
-set util_report [report_utilization -return_string]
-set lut_used 0; set ff_used 0; set bram_used 0; set dsp_used 0
-
-if {[regexp {Slice LUTs\s*\|\s*(\d+)} $util_report match val]} { set lut_used $val }
-if {[regexp {Slice Registers\s*\|\s*(\d+)} $util_report match val]} { set ff_used $val }
-if {[regexp {Block RAM Tile\s*\|\s*(\d+(\.\d+)?)} $util_report match val]} { set bram_used $val }
-if {[regexp {DSPs\s*\|\s*(\d+)} $util_report match val]} { set dsp_used $val }
-
-# Timing Parse
-set wns [get_property SLACK [get_timing_paths -max_paths 1 -setup]]
-if {$wns == ""} { set wns 0.0 }
 set max_freq 0
-if {$CLOCK_PERIOD > $wns} {
-    set max_freq [expr {1000.0 / ($CLOCK_PERIOD - $wns)}]
+if {$CLOCK_PERIOD > $impl_wns} {
+    set max_freq [expr {1000.0 / ($CLOCK_PERIOD - $impl_wns)}]
 }
 
-# Write CSV
-puts $fp "lut_used,$lut_used,count,utilization"
-puts $fp "ff_used,$ff_used,count,utilization"
-puts $fp "lut_available,$lut_avail,count,utilization"
-puts $fp "ff_available,$ff_avail,count,utilization"
-puts $fp "clock_period,$CLOCK_PERIOD,ns,timing"
-puts $fp "wns,$wns,ns,timing"
-puts $fp "max_frequency,[format %.2f $max_freq],MHz,timing"
-puts $fp "synth_time,$synth_time,seconds,build"
-puts $fp "impl_time,$impl_time,seconds,build"
+# ==============================================================================
+# EXPORT DATA
+# ==============================================================================
+puts "INFO: Generating CSV..."
+set csv_file [file join $REPORT_DIR "synthesis_summary.csv"]
+set fp [open $csv_file w]
+puts $fp "metric,value"
+
+# Main Resources
+puts $fp "synth_lut,$synth_lut"
+puts $fp "synth_ff,$synth_ff"
+puts $fp "synth_bram,$synth_bram"
+puts $fp "synth_dsp,$synth_dsp"
+puts $fp "impl_lut,$impl_lut"
+puts $fp "impl_ff,$impl_ff"
+puts $fp "impl_bram,$impl_bram"
+puts $fp "impl_dsp,$impl_dsp"
+
+# Detailed Primitives
+puts $fp "synth_muxf7,$synth_muxf7"
+puts $fp "synth_muxf8,$synth_muxf8"
+puts $fp "synth_carry,$synth_carry"
+puts $fp "impl_muxf7,$impl_muxf7"
+puts $fp "impl_muxf8,$impl_muxf8"
+puts $fp "impl_carry,$impl_carry"
+
+# Timing & Power
+puts $fp "synth_wns,$synth_wns"
+puts $fp "impl_wns,$impl_wns"
+puts $fp "impl_whs,$impl_whs"
+puts $fp "max_freq,[format %.2f $max_freq]"
+puts $fp "total_power,$total_power"
 
 close $fp
+
+puts "INFO: Generating Bitstream..."
+
+# Ensure we write to the build directory
+set bit_file [file join $BUILD_DIR "top.bit"]
+
+# -bin_file creates a raw binary (useful for STM32 loading)
+# -force overwrites existing files
+write_bitstream -force -bin_file $bit_file
+
+puts "INFO: Bitstream generated at $bit_file"
+
+# Check if file actually exists before finishing
+if {[file exists $bit_file]} {
+    puts "SUCCESS: Bitstream created successfully."
+} else {
+    puts "ERROR: Bitstream generation failed!"
+}
+
 close_project
-puts "INFO: DONE..."
+puts "INFO: DONE."

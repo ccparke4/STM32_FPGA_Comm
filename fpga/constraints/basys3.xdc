@@ -113,15 +113,15 @@ set_property IOSTANDARD LVCMOS33 [get_ports {an[*]}]
 ## -----------------------------------------------------------------------------
 
 ## SPI signals - async to sys_clk
-set_false_path -from [get_ports spi_sclk]
-set_false_path -from [get_ports spi_cs]
-set_false_path -from [get_ports spi_mosi]
-set_false_path -to [get_ports spi_miso]
+set_false_path -from [get_ports sclk]
+set_false_path -from [get_ports cs]
+set_false_path -from [get_ports mosi]
+set_false_path -to [get_ports miso]
 
 ## I2C signals - async to sys_clk
-set_false_path -from [get_ports i2c_scl]
-set_false_path -from [get_ports i2c_sda]
-set_false_path -to [get_ports i2c_sda]
+set_false_path -from [get_ports scl]
+set_false_path -from [get_ports sda]
+set_false_path -to [get_ports sda]
 
 ## -----------------------------------------------------------------------------
 ## Slow/Non-Critical Outputs

@@ -12,40 +12,34 @@ module top (
     input  logic       sclk,
     input  logic       cs,
     input  logic       mosi,
-    output logic       miso
+    output logic       miso,
+
+    // --- IO ---
+    input  logic [7:0] sw,      // Switches
+    output logic [7:0] led,     // LEDs
+    output logic [6:0] seg,     // 7-seg segments
+    output logic [3:0] an       // 7-seg anodes
 );
 
-    // --- I2C Internal Signals ---
-    logic sda_i;
-    logic sda_o;
-    logic sda_oe;
-
-    // --- I2C IO BUFFER (The "Physical" Connection) ---
-    // 1. We read from the pin into 'sda_i'
-    assign sda_i = sda; 
-    
-    // 2. If Output Enable (oe) is high, we drive sda_o (usually Low). 
-    //    If oe is low, we let the resistor pull it High (Z).
-    //    (Standard Open-Drain Logic)
-    assign sda = (sda_oe) ? 1'b0 : 1'bz; 
-
-    // --- Internal Register File (Glue Logic) ---
+    // --- Internal Signals ---
     logic [7:0] reg_addr;
     logic [7:0] reg_wdata;
     logic       reg_wr;
     logic [7:0] reg_rdata;
     logic       reg_rd;
-    
-    // Simple RAM to store data so we can read it back
-    logic [7:0] memory [0:255];
 
-    always_ff @(posedge clk) begin
-        if (reg_wr) begin
-            memory[reg_addr] <= reg_wdata;
-        end
-        // Always present data for reading
-        reg_rdata <= memory[reg_addr];
-    end
+    // SPI data exhange 
+    logic [7:0] spi_rx_data;
+    logic       spi_active;
+
+    // I2C IO Buffer Logic
+    logic sda_i, sda_o, sda_oe;
+
+    assign sda_i = i2c_sda;
+    assign i2c_sda = (sda_oe) ? 1'b0 : 1'bz;
+
+    // Activ status for register file
+    assign spi_active = !cs;
 
     // --- Instantiate I2C Slave ---
     i2c_slave #(
@@ -73,6 +67,32 @@ module top (
         .mosi(mosi),
         .miso(miso),
         .data_received()     // Connect this to memory if you want Loopback later
+    );
+
+    // --- Instantiate Register file ---
+    register_file reg_file_inst (
+        .clk(clk),
+        .rst_n(rst_n), 
+        // I2C interface
+        .reg_addr(reg_addr),
+        .reg_wdata(reg_wdata),
+        .reg_wr(reg_wr),
+        .reg_rdata(reg_rdata),
+        .reg_rd(reg_rd),
+        // HW IO
+        .led_out(led),
+        .sw_in(sw),
+        // SPI status
+        .spi_active(spi_active),
+        .spi_rx_byte(spi_rx_data)
+    );
+
+    // --- Instatiate 7-segment display ---
+    seven_seg display_inst (
+        .clk(clk),
+        .number({8'b00, spi_rx_data}),  // 00 + spi data
+        .seg(seg),
+        .an(an)
     );
 
 endmodule
