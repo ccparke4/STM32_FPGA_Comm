@@ -29,6 +29,7 @@
 
 #include "fpga_ctrl_task.h"
 #include "fpga_spi_task.h"
+#include "link_char_task.h"
 
 
 
@@ -88,6 +89,15 @@ const osThreadAttr_t fpgaSpiTask_attributes = {
 		.stack_size = STACK_SIZE_SPI,
 		.priority = (osPriority_t) osPriorityNormal
 };
+#endif
+
+#if ENABLE_LINK_CHAR
+  osThreadId_t linkCharTaskHandle;
+  const osThreadAttr_t linkCharTask_attributes = {
+  		.name = "linkCharTask",
+  		.stack_size = STACK_SIZE_LINK_CHAR,
+  		.priority = (osPriority_t) osPriorityHigh
+  };
 #endif
 
 volatile uint8_t spi_dma_complete = 0;
@@ -203,18 +213,26 @@ int main(void)
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* conditionally create tasks based on test mode */
-#if ENABLE_I2C_SUBSYSTEM
+#if ENABLE_LINK_CHAR
+  /* Link Characterization Mode - only run char task */
+  linkCharTaskHandle = osThreadNew(StartLinkCharTask, NULL, &linkCharTask_attributes);
+  DBG_PRINT("[MAIN] Created Link Characterization Task\n");
+  DBG_PRINT("[MAIN] Normal I2C/SPI tasks DISABLED during characterization\n");
+#else
+  /* Normal Mode - create I2C and SPI tasks */
+  #if ENABLE_I2C_SUBSYSTEM
   fpgaCtrlTaskHandle = osThreadNew(StartFpgaCtrlTask, NULL, &fpgaCtrlTask_attributes);
   DBG_PRINT("[MAIN] Created FPGA Control (I2C) Task\n");
-#else
+  #else
   DBG_PRINT("[MAIN] I2C Subsystem DISABLED\n");
-#endif
+  #endif
 
-#if ENABLE_SPI_SUBSYSTEM
+  #if ENABLE_SPI_SUBSYSTEM
   fpgaSpiTaskHandle = osThreadNew(StartFpgaSpiTask, NULL, &fpgaSpiTask_attributes);
   DBG_PRINT("[MAIN] Created FPGA SPI (Data Plane) Task\n");
-#else
+  #else
   DBG_PRINT("[MAIN] SPI Subsystem DISABLED\n");
+  #endif
 #endif
   /* USER CODE END RTOS_THREADS */
 
@@ -462,12 +480,15 @@ static void print_system_info(void) {
 
 static const char* get_test_mode_string(int mode) {
 	switch (mode) {
-		case TEST_MODE_NORMAL:          return "NORMAL";
-		case TEST_MODE_I2C_ONLY:        return "I2C_ONLY";
-		case TEST_MODE_SPI_ONLY:        return "SPI_ONLY";
-        case TEST_MODE_I2C_SPI_STRESS:  return "I2C_SPI_STRESS";
-        default:                        return "UNKNOWN";
-    }
+	case TEST_MODE_NORMAL: 			return "NORMAL";
+	case TEST_MODE_I2C_ONLY:		return "I2C_ONLY";
+	case TEST_MODE_SPI_ONLY:		return "SPI_ONLY";
+	case TEST_MODE_I2C_SPI_STRESS:	return "I2C_SPI_STRESS";
+	case TEST_MODE_LOOPBACK:		return "LOOPBACK";
+	case TEST_MODE_LINK_CHAR:		return "LINK_CHAR (Full)";
+	case TEST_MODE_LINK_CHAR_QUICK:	return "LINK_CHAR (Quick)";
+	default:						return "UNKNOWN";
+	}
 }
 /* USER CODE END 4 */
 
