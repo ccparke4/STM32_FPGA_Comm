@@ -129,7 +129,7 @@ void StartLinkCharTask(void *argument)
     printf("  Duration: %-5lu ms                                          \n", s_results.test_duration_ms);
     printf("                                                              \n");
     printf("  Key Metrics:                                                \n");
-    printf("    I2C Read Latency:  %4lu µs avg                            \n", s_results.i2c.read_avg_us);
+    printf("    I2C Read Latency:  %4lu µs avg                            \n", s_results.i2c.rd_avg_us);
     printf("    SPI Throughput:    %4lu KB/s (DMA)                        \n", s_results.spi.dma_throughput_kbps);
     printf("    Bit Error Rate:    %.2e                                	  \n", s_results.spi.ber);
     printf("==============================================================\n");

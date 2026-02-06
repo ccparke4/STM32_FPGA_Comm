@@ -30,7 +30,7 @@ static volatile uint32_t s_timer_start;
 
 /* trigger gpio */
 #define TRIGGER_GPIO_PORT	GPIOE
-#define TRIGGER_GPIO_PIN	GPIO_PIN_0;
+#define TRIGGER_GPIO_PIN	GPIO_PIN_0
 
 /* SPI CS */
 #ifndef SPI_CS_GPIO_Port
@@ -53,7 +53,7 @@ void link_char_timer_init(void) {
 	// enable DWT cycle counter
 	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
 	DWT->CYCCNT = 0;
-	DWT->CTRL |= DT_CTRL_CYCCNTENA_Msk;
+	DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
 }
 
@@ -257,14 +257,14 @@ void link_char_test_i2c_latency(uint32_t iterations, link_char_i2c_t *results) {
 			errors++;
 		}
 		// progress
-		if ((i + 1) % progress_intrval == 0) {
+		if ((i + 1) % progress_interval == 0) {
 			printf("  Progress: %lu%% (%lu errors)\n", ((i + 1) * 100) / iterations, errors);
 		}
 	}
 
 	// calculate results
-	uint32_t valid = itrations - errors;
-	reults->total_transactions = iterations;
+	uint32_t valid = iterations - errors;
+	results->total_transactions = iterations;
 	results->errors = errors;
 	results->wr_avg_us = (valid > 0) ? (uint32_t)(write_total / valid) : 0;
 	results->rd_avg_us = (valid > 0) ? (uint32_t)(read_total / valid) : 0;

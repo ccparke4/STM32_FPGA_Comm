@@ -30,7 +30,7 @@
 /* =========================================================================
  * ACTIVE TEST MODE - CHANGE THIS TO SELECT MODE
  * ========================================================================= */
-#define APP_TEST_MODE       TEST_MODE_LINK_CHAR_QUICK
+#define APP_TEST_MODE       TEST_MODE_LINK_CHAR
 
 /* Subsystem Enable/Disable ============================================= */
 

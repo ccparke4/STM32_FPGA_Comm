@@ -31,7 +31,7 @@
 #define CHAR_STRESS_TEST			(1 << 5)	// Long duration stress test
 
 #define CHAR_TEST_ALL				(0xFF)		// run all
-#define CHAR_TEST_QUICK				(CHAR_TEST_CONNECTIVITY | CHAR_TEST_LATENCY | CHAR_TEST_SPI_TRHOUGHPUT)
+#define CHAR_TEST_QUICK				(CHAR_TEST_CONNECTIVITY | CHAR_TEST_I2C_LATENCY | CHAR_TEST_SPI_THROUGHPUT)
 
 /*
  *  results structs
@@ -92,7 +92,7 @@ typedef struct {
 #define LINK_CHAR_CONFIG_DEFAULT {  	\
 		.i2c_iterations = 1000, 		\
 		.spi_burst_size = 64,       	\
-		.spi_per_bytes = 1000000,		\
+		.spi_ber_bytes = 1000000,		\
 		.concurrent_duration_sec = 30,	\
 		.stress_duration_sec = 300,		\
 		.verbose = true,				\
