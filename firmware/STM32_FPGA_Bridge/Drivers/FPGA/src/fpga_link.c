@@ -12,19 +12,21 @@
 #include <string.h>
 #include <stdbool.h>
 
+
 /* Private Macros ======================================================== */
 #define FPGA_I2C_ADDR_WRITE     (FPGA_I2C_ADDR << 1)
 #define FPGA_I2C_ADDR_READ		(FPGA_I2C_ADDR << 1)
 /*Private Functions ====================================================== */
-/**
-* @brief    Check if handle is valid and initialized
+
+/*
+* Check if handle is valid and initialized
 */
 static inline bool fpga_is_valid(fpga_handle_t *hfpga) {
     return (hfpga != NULL && hfpga->hi2c != NULL);
 }
 
-/**
- * @brief Helper to get string name from device ID
+/*
+ *  Helper to get string name from device ID
  */
 static const char* get_device_name(uint8_t device_id) {
     switch(device_id) {
@@ -34,6 +36,8 @@ static const char* get_device_name(uint8_t device_id) {
         default:   return "Unknown Device";
     }
 }
+
+
 /* Core Functions Implementation ======================================== */
 
 fpga_status_t fpga_init(fpga_handle_t *hfpga, I2C_HandleTypeDef *hi2c) {

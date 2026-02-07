@@ -26,7 +26,7 @@
 #endif
 
 /* Debug ===================================================================*/
-#define FPGA_DEBUG_ENABLE 1
+#define FPGA_DEBUG_ENABLE 0
 
 #if FPGA_DEBUG_ENABLE
     #define FPGA_DEBUG(fmt, ...)        printf("[FPGA_DBG] " fmt "\r\n", ##__VA_ARGS__)
@@ -141,6 +141,7 @@ typedef struct {
 
 fpga_status_t fpga_init(fpga_handle_t *hfpga, I2C_HandleTypeDef *hi2c);
 fpga_status_t fpga_init_with_retry(fpga_handle_t *hfpga, I2C_HandleTypeDef *hi2c, uint8_t max_retries, uint32_t retry_delay_ms);
+
 void fpga_i2c_diagnostic(I2C_HandleTypeDef *hi2c);
 
 fpga_status_t fpga_read_reg(fpga_handle_t *hfpga, uint8_t reg, uint8_t *data);

@@ -327,9 +327,9 @@ void link_char_test_i2c_latency(uint32_t iterations, link_char_i2c_t *results) {
 	}
 
 	printf("--------------------------------------------\n");
-	printf("  Write: %lu / %lu / %lu µs (min/avg/max)\n",
+	printf("  Write: %lu / %lu / %lu us (min/avg/max)\n",
           results->wr_min_us, results->wr_avg_us, results->wr_max_us);
-	printf("  Read:  %lu / %lu / %lu µs (min/avg/max)\n",
+	printf("  Read:  %lu / %lu / %lu us (min/avg/max)\n",
 	      results->rd_min_us, results->rd_avg_us, results->rd_max_us);
 	printf("  Errors: %lu / %lu (%.2f%% success)\n",
 	      results->errors, results->total_transactions, results->success_rate_pct);
@@ -355,6 +355,7 @@ void link_char_test_spi_throughput(uint32_t burst_size, link_char_spi_t *results
 
     const uint32_t num_bursts = 100;
     uint32_t total_time_us = 0;
+    uint32_t total_bytes = burst_size * num_bursts;
 
     // Single byt RTT
     uint8_t tx = 0xAA, rx = 0;
@@ -367,7 +368,7 @@ void link_char_test_spi_throughput(uint32_t burst_size, link_char_spi_t *results
     results->single_byte_rtt_us = link_char_timer_elapsed_us();
     HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
 
-    printf("  Single byte RTT: %lu µs\n", results->single_byte_rtt_us);
+    printf("  Single byte RTT: %lu us\n", results->single_byte_rtt_us);
 
     // burst throughput (polling)
     printf("  Testing polling mode...\n");
@@ -383,58 +384,83 @@ void link_char_test_spi_throughput(uint32_t burst_size, link_char_spi_t *results
         HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
 
         link_char_trigger_set(false);
-
-        HAL_Delay(1);  /* Small gap between bursts */
     }
 
-    uint32_t total_bytes = burst_size * num_bursts;
-    results->burst_throughput_kbps = (total_bytes * 1000) / total_time_us;  /* KB/s */
 
-    printf("  Polling %lu bytes x %lu: %lu KB/s\n", burst_size, num_bursts, results->burst_throughput_kbps);
+    if (total_time_us > 0) {
+    	results->burst_throughput_kbps = (total_bytes * 1000) / total_time_us;
+    } else {
+    	results->burst_throughput_kbps = 0;
+    }
+
+
+    printf("  Polling: %lu KB/s\n", results->burst_throughput_kbps);
 
     // DMA throughput testing
-    printf("  Testing DMA mode...\n");
+    printf("  Testing DMA mode (%lu x %lu bytes)...\n", num_bursts, burst_size);
 
-    volatile bool dma_done = false;
-    uint32_t dma_time_us = 0;
-
-    // initialize stream driver, should be already
+    // reinit stream driver
     fpga_stream_init(&FPGA_SPI_HANDLE);
 
-    // DMA tx timing
     total_time_us = 0;
+    uint32_t dma_errors = 0;
+
+    // DMA tx timing
     for (uint32_t i = 0; i < num_bursts; i++) {
 
     	link_char_trigger_set(true);
-        link_char_timer_start();
 
-        // start dma transfer
-        HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
-        //HAL_SPI_TransmitReceive_DMA(&FPGA_SPI_HANDLE, s_tx_buf, s_rx_buf, burst_size);
+    	// Flush cache before DMA - may be redundant and waste of clk cycles
+    	// Why? -> because this region should be uncacheable via MPU
+    	SCB_CleanDCache_by_Addr((uint32_t*)s_tx_buf, burst_size);
+    	SCB_CleanDCache_by_Addr((uint32_t*)s_rx_buf, burst_size);
 
-        // wait for completion
-        while (HAL_SPI_GetState(&FPGA_SPI_HANDLE) != HAL_SPI_STATE_READY) {
-        	// semaphore eventually..?
-        }
+    	link_char_timer_start();
 
-        total_time_us += link_char_timer_elapsed_us();
-        HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
+    	// Start dma transfer using steram driver
+    	if (fpga_stream_start(s_tx_buf, s_rx_buf, burst_size) == STREAM_OK) {
+    		// wait for completion w/ timeout
+    		uint32_t timeout = HAL_GetTick() + 100;
+    		while (!fpga_stream_check_complete()) {
+    			if (HAL_GetTick() > timeout) {
+    				dma_errors++;
+    				fpga_stream_stop();
+    				break;
+    			}
+    		}
+    		fpga_stream_clear_complete();
+    		fpga_stream_stop();
+    	} else {
+    		dma_errors++;
+    	}
+    	total_time_us += link_char_timer_elapsed_us();
 
-        link_char_trigger_set(false);
+    	link_char_trigger_set(false);
 
-        HAL_Delay(1);
-
+    	// invalidate cache
+    	SCB_InvalidateDCache_by_Addr((uint32_t*)s_rx_buf, burst_size);
     }
-    results->dma_throughput_kbps = (total_bytes * 1000) / total_time_us;
 
-    printf("  DMA %lu bytes x %lu: %lu KB/s\n", burst_size, num_bursts, results->dma_throughput_kbps);
+    if (total_time_us > 0) {
+    	results->dma_throughput_kbps = (total_bytes * 1000) / total_time_us;
+    } else {
+    	results->dma_throughput_kbps = 0;
+    }
 
-    printf("──────────────────────────────────────────\n");
+    printf("	DMA: %lu KB/s", results->dma_throughput_kbps);
+    if (dma_errors > 0) {
+    	printf("	(%lu errors)", dma_errors);
+    }
+    printf("\n");
+
+    printf("============================================================\n");
     printf("  Polling: %lu KB/s\n", results->burst_throughput_kbps);
     printf("  DMA:     %lu KB/s\n", results->dma_throughput_kbps);
-    printf("  Speedup: %.1fx\n",
-    		(results->burst_throughput_kbps > 0) ?
-            (float)results->dma_throughput_kbps / results->burst_throughput_kbps : 0);
+
+    if (results->burst_throughput_kbps > 0) {
+    	printf("	Speedup: %.1fx\n",
+    			(float)results->dma_throughput_kbps / (float)results->burst_throughput_kbps);
+    }
     printf("\n");
 }
 
@@ -483,7 +509,7 @@ void link_char_test_spi_ber(uint32_t num_bytes, link_char_spi_t *results) {
 
 	        // Progress
 	        if ((i + 1) % progress_interval == 0) {
-	            printf("  Progress: %lu%% (%llu bit errors)\n",
+	            printf("  Progress: %lu%% (%lu bit errors)\n",
 	                   ((i + 1) * 100) / num_bytes, error_bits);
 	        }
 	    }
@@ -497,9 +523,9 @@ void link_char_test_spi_ber(uint32_t num_bytes, link_char_spi_t *results) {
 	    results->error_bytes = (error_bits + 7) / 8;  // Approximate
 	    results->ber = (total_bits > 0) ? (double)error_bits / (double)total_bits : 0;
 
-	    printf("──────────────────────────────────────────\n");
-	    printf("  Total bits:  %llu\n", total_bits);
-	    printf("  Error bits:  %llu\n", error_bits);
+	    printf("==================================\n");
+	    printf("  Total bits:  %lu\n", total_bits);
+	    printf("  Error bits:  %lu\n", error_bits);
 	    printf("  BER:         %.2e", results->ber);
 	    if (results->ber == 0) {
 	        printf(" (PERFECT - 0%%)");
@@ -576,10 +602,10 @@ bool link_char_test_concurrent(uint32_t duration_sec) {
 
 	bool pass = (i2c_err == 0) && (spi_err == 0);
 
-	printf("──────────────────────────────────────────\n");
+	printf("===============================================\n");
 	printf("  I2C: %lu transactions, %lu errors\n", i2c_ok + i2c_err, i2c_err);
 	printf("  SPI: %lu transactions, %lu errors\n", spi_ok + spi_err, spi_err);
-	printf("  Result: %s\n", pass ? "PASS ✓" : "FAIL ✗");
+	printf("  Result: %s\n", pass ? "PASS" : "FAIL");
 	printf("\n");
 
 	return pass;
@@ -605,9 +631,9 @@ bool link_char_run(uint8_t tests, const link_char_config_t *config, link_char_re
     bool all_pass = true;
 
     printf("\n");
-    printf("════════════════════════════════════════════════════════════\n");
+    printf("============================================================\n");
     printf("            LINK CHARACTERIZATION SUITE                      \n");
-    printf("════════════════════════════════════════════════════════════\n");
+    printf("============================================================\n");
 
     // Connectivity
     if (tests & CHAR_TEST_CONNECTIVITY) {
@@ -673,22 +699,22 @@ bool link_char_full(link_char_results_t *results) {
 void link_char_print_results(const link_char_results_t *results)
 {
     printf("\n");
-    printf("══════════════════════════════════════════════════════════════\n");
+    printf("============================================================\n");
     printf("               CHARACTERIZATION RESULTS                       \n");
-    printf("══════════════════════════════════════════════════════════════\n");
+    printf("============================================================\n");
     printf("  I2C CONTROL PLANE                                           \n");
-    printf("  		Write: %4lu / %4lu / %4lu µs (min/avg/max)            \n", results->i2c.wr_min_us, results->i2c.wr_avg_us, results->i2c.wr_max_us);
-    printf("  		Read:  %4lu / %4lu / %4lu µs (min/avg/max)            \n", results->i2c.rd_min_us, results->i2c.rd_avg_us, results->i2c.rd_max_us);
+    printf("  		Write: %4lu / %4lu / %4lu us (min/avg/max)            \n", results->i2c.wr_min_us, results->i2c.wr_avg_us, results->i2c.wr_max_us);
+    printf("  		Read:  %4lu / %4lu / %4lu us (min/avg/max)            \n", results->i2c.rd_min_us, results->i2c.rd_avg_us, results->i2c.rd_max_us);
     printf("  		Success: %.2f%% (%lu/%lu)                             \n", results->i2c.success_rate_pct, results->i2c.total_transactions - results->i2c.errors, results->i2c.total_transactions);
-    printf("══════════════════════════════════════════════════════════════\n");
+    printf("============================================================\n");
     printf("  SPI DATA PLANE                                              \n");
-    printf("  		Single Byte RTT: %4lu µs                              \n", results->spi.single_byte_rtt_us);
+    printf("  		Single Byte RTT: %4lu mwas                              \n", results->spi.single_byte_rtt_us);
     printf("  		Polling:         %4lu KB/s                            \n", results->spi.burst_throughput_kbps);
     printf("  		DMA:             %4lu KB/s                            \n", results->spi.dma_throughput_kbps);
     printf("  	    BER:             %.2e                                 \n", results->spi.ber);
-    printf("══════════════════════════════════════════════════════════════\n");
+    printf("============================================================\n");
     printf("  Connectivity: %-4s  Concurrent: %-4s  Duration: %lu ms      \n", results->connectivity_pass ? "PASS" : "FAIL", results->concurrent_pass ? "PASS" : "FAIL", results->test_duration_ms);
-    printf("══════════════════════════════════════════════════════════════\n");
+    printf("============================================================\n");
 }
 
 void link_char_print_csv(const link_char_results_t *results)
