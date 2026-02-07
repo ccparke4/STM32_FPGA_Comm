@@ -14,8 +14,8 @@ create_clock -period 10.000 -name sys_clk -waveform {0.000 5.000} [get_ports clk
 ## -----------------------------------------------------------------------------
 ## Reset Button (BTNC - active low)
 ## -----------------------------------------------------------------------------
-set_property PACKAGE_PIN U18 [get_ports rst_n]
-set_property IOSTANDARD LVCMOS33 [get_ports rst_n]
+set_property PACKAGE_PIN U18 [get_ports rst_btn]
+set_property IOSTANDARD LVCMOS33 [get_ports rst_btn]
 
 ## -----------------------------------------------------------------------------
 ## I2C Control Plane (JB Pmod Header)
@@ -136,7 +136,7 @@ set_false_path -to [get_ports {an[*]}]
 ## Switches and reset are user inputs, async to sys_clk
 ## -----------------------------------------------------------------------------
 set_false_path -from [get_ports {sw[*]}]
-set_false_path -from [get_ports rst_n]
+set_false_path -from [get_ports rst_btn]
 
 ## =============================================================================
 ## CONFIGURATION

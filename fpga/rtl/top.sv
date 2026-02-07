@@ -2,7 +2,7 @@
 
 module top (
     input  logic       clk,      // System Clock
-    input  logic       rst_n,    // Active Low Reset
+    input  logic       rst_btn,    // Active Low Reset
     
     // --- Physical I2C Pins (JB) ---
     input  logic       i2c_scl,      // SCL is Input only for Slave (unless clock stretching)
@@ -20,6 +20,10 @@ module top (
     output logic [6:0] seg,     // 7-seg segments
     output logic [3:0] an       // 7-seg anodes
 );
+
+    // active low rst signal -- invert the button press
+    logic rst_n;
+    assign rst_n = !rst_btn;
 
     // --- Internal Signals ---
     logic [7:0] reg_addr;
