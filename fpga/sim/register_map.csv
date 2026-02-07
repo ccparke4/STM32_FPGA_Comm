@@ -1,20 +1,20 @@
-Address,Name,Access,Description
-0x00,ADDR_DEVICE_ID,RO,Device ID (Fixed 0xA7)
-0x01,ADDR_VERSION_MAJ,RO,Major Version
-0x02,ADDR_VERSION_MIN,RO,Minor Version
-0x03,ADDR_SYS_STATUS,RO,System Status [7:I2C 6:SPI 5:ERR]
-0x04,ADDR_SYS_CTRL,RW,System Control
-0x05,ADDR_SCRATCH_0,RW,Scratchpad 0
-0x06,ADDR_SCRATCH_1,RW,Scratchpad 1
-0x10,ADDR_LINK_CAPS,RO,Link Capabilities
-0x11,ADDR_DATA_MODE,RW,Data Plane Mode
-0x12,ADDR_DATA_CLK,RW,Data Plane Clock Div
-0x13,ADDR_DATA_STATUS,RO,Data Plane Status
-0x14,ADDR_DATA_ERR,RO,Data Plane Error Count
-0x15,ADDR_DATA_TEST,RO,SPI Debug Readback
-0x20,ADDR_LED_OUT,RW,LED Output [7:0]
-0x21,ADDR_LED_OUT_H,RW,Extended LED Output
-0x22,ADDR_SW_IN,RO,Switch Input [7:0]
-0x23,ADDR_SW_IN_H,RO,Extended Switch Input
-0x24,ADDR_SEG_DATA,RW,7-Segment Data
-0x25,ADDR_SEG_CTRL,RW,7-Segment Control
+Address,Name,Access,Reset,Description
+0x00,DEVICE_ID,RO,0xA7,Device identification (Artix-7)
+0x01,VERSION_MAJ,RO,0x01,Firmware version major
+0x02,VERSION_MIN,RO,0x00,Firmware version minor
+0x03,SYS_STATUS,RO/W1C,0x80,"[7]=I2C ready, [6]=SPI active, [5]=error (W1C), [4]=IRQ pending"
+0x04,SYS_CTRL,RW,0x00,System control register
+0x05,SCRATCH_0,RW,0x00,General purpose scratch register 0
+0x06,SCRATCH_1,RW,0x00,General purpose scratch register 1
+0x10,LINK_CAPS,RO,0x15,"[7:6]=bus width, [5:4]=max clk, [3]=FMI, [2]=DMA, [1]=CRC, [0]=IRQ"
+0x11,DATA_MODE,RW,0x00,"[7]=enable, [6]=loopback, [3:2]=width, [1:0]=mode"
+0x12,DATA_CLK,RW,0x04,SPI clock divider
+0x13,DATA_STATUS,RO,0x00,[7]=SPI active
+0x14,DATA_ERR,RO,0x00,Error counter
+0x15,DATA_TEST,RO,0x00,Test pattern register
+0x20,LED_OUT,RW,0x00,LED output register (bits 7:0)
+0x21,LED_OUT_H,RW,0x00,LED output register high (bits 15:8)
+0x22,SW_IN,RO,0x00,Switch input register (bits 7:0)
+0x23,SW_IN_H,RO,0x00,Switch input register high (bits 15:8)
+0x24,SEG_DATA,RW,0x00,Seven segment display data
+0x25,SEG_CTRL,RW,0x00,Seven segment display control

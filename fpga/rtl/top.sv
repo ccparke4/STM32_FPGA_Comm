@@ -66,12 +66,12 @@ module top (
     // --- Instantiate SPI Slave ---
     spi_slave spi_inst (
         .clk            (clk),
-        .rst_n          (rst_n_sync),      // <-- ADD THIS!
+        .rst_n          (rst_n),   
         .sclk           (spi_sclk),
         .cs             (spi_cs),
         .mosi           (spi_mosi),
         .miso           (spi_miso),
-        .data_received  (dut_spi_rx_byte)
+        .data_received  (spi_rx_data)
     );
 
     // --- Instantiate Register file ---
