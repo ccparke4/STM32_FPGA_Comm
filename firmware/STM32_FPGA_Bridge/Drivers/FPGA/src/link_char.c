@@ -93,7 +93,7 @@ void link_char_trigger_pulse(void) {
     HAL_GPIO_WritePin(TRIGGER_GPIO_PORT, TRIGGER_GPIO_PIN, GPIO_PIN_SET);
     /* Brief delay - about 1us at 550MHz */
     for (volatile int i = 0; i < 100; i++);
-    	HAL_GPIO_WritePin(TRIGGER_GPIO_PORT, TRIGGER_GPIO_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(TRIGGER_GPIO_PORT, TRIGGER_GPIO_PIN, GPIO_PIN_RESET);
 }
 
 void link_char_trigger_set(bool high)
@@ -612,6 +612,163 @@ bool link_char_test_concurrent(uint32_t duration_sec) {
 }
 
 /*
+ * SPI - find max stable clock
+ */
+void link_char_test_spi_clock_sweep(link_char_spi_t *results)
+{
+	printf("\n");
+	printf("==================================================\n");
+	printf(" 		SPI CLOCK CHARACTERIZATION				  \n");
+	printf("==================================================\n");
+
+	// get clocks
+	uint32_t spi_kernel_clk_hz = HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI4);
+	uint32_t spi_kernel_clk_khz = spi_kernel_clk_hz / 1000;
+
+	printf("	SPI4 kernel clock: %lu MHz\n\n", spi_kernel_clk_hz / 1000000);
+
+	const uint32_t prescalers[] = {
+			SPI_BAUDRATEPRESCALER_256,
+			SPI_BAUDRATEPRESCALER_128,
+			SPI_BAUDRATEPRESCALER_64,
+			SPI_BAUDRATEPRESCALER_32,
+			SPI_BAUDRATEPRESCALER_16,
+			SPI_BAUDRATEPRESCALER_8,
+			SPI_BAUDRATEPRESCALER_4,
+			SPI_BAUDRATEPRESCALER_2
+	};
+
+
+	const uint32_t dividers[] = {256, 128, 64, 32, 16, 8, 4, 2};
+
+	const char* prescaler_names[] = {
+			"/256", "/128", "/64", "/32", "/16", "/8", "/4", "/2"
+	};
+
+	const uint32_t num_prescalers = sizeof(prescalers) / sizeof(prescalers[0]);
+	const uint32_t test_bytes = 10000;
+
+	// storage for csv out (plotting...)
+	uint32_t stored_freq_khz[7];
+	uint32_t stored_throughput[7];
+	uint32_t stored_errors[7];
+
+	uint32_t max_stable_prescaler_idx = 0;
+	uint32_t best_throughput = 0;
+	uint32_t max_stable_freq_khz = 0;
+
+
+	printf("  Testing %lu prescaler settings with %lu bytes each...\n\n", num_prescalers, test_bytes);
+	printf("  %-8s  %-14s  %-12s  %-8s  %s\n", "Prescaler", "SPI Clock", "Throughput", "Errors", "Status");
+	printf("===========================================================\n");
+
+	for (uint32_t i = 0; i < num_prescalers; i++) {
+		// reconfig SPI prescaler
+		HAL_SPI_DeInit(&FPGA_SPI_HANDLE);
+		FPGA_SPI_HANDLE.Init.BaudRatePrescaler = prescalers[i];
+		HAL_SPI_Init(&FPGA_SPI_HANDLE);
+
+		// small delay for stability
+		HAL_Delay(10);
+
+		// BER test
+		uint32_t errors = 0; uint8_t last_tx = 0;
+
+		link_char_timer_start();
+
+		HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
+
+		for (uint32_t j = 0; j < test_bytes; j++) {
+			uint8_t tx = (uint8_t)(j & 0xFF);
+			uint8_t rx = 0;
+
+			HAL_SPI_TransmitReceive(&FPGA_SPI_HANDLE, &tx, &rx, 1, 100);
+
+			if (j > 0 && rx != last_tx)
+				errors++;
+
+			last_tx = tx;
+		}
+
+		HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
+
+		uint32_t elapsed_us = link_char_timer_elapsed_us();
+		uint32_t throughput_kbps = (elapsed_us > 0) ? (test_bytes * 1000) / elapsed_us : 0;
+		uint32_t spi_clk_khz =  spi_kernel_clk_khz / dividers[i];
+
+		// store resuts
+		stored_freq_khz[i] = spi_clk_khz;
+		stored_throughput[i] = throughput_kbps;
+		stored_errors[i] = errors;
+
+
+
+		const char* status;
+		if (errors == 0) {
+			status = "PASS";
+			max_stable_prescaler_idx = i;
+			if (throughput_kbps > best_throughput)
+				best_throughput = throughput_kbps;
+		} else if (errors < 10) {
+			status = "MARGINAL";
+		} else {
+			status = "FAIL";
+		}
+
+		// format
+		if (spi_clk_khz >= 1000) {
+			printf("	%-8s	%6lu.%02lu MHz	%-8lu KB/s	%-8lu	%s\n",
+					prescaler_names[i],
+					spi_clk_khz / 1000,
+					(spi_clk_khz % 1000) / 10,
+					throughput_kbps,
+					errors,
+					status);
+		} else {
+			printf("  %-8s  %6lu kHz      %-8lu KB/s  %-8lu  %s\n",
+					prescaler_names[i],
+					spi_clk_khz,
+					throughput_kbps,
+					errors,
+					status);
+		}
+
+		/* restore default */
+		HAL_SPI_DeInit(&FPGA_SPI_HANDLE);
+		FPGA_SPI_HANDLE.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
+		HAL_SPI_Init(&FPGA_SPI_HANDLE);
+
+		printf("\n");
+		printf("=================================================\n");
+		printf("  Maximum stable: %s (~", prescaler_names[max_stable_prescaler_idx]);
+		if (max_stable_freq_khz >= 1000) {
+			printf("%lu.%lu MHz)\n", max_stable_freq_khz / 1000, (max_stable_freq_khz % 1000) / 100);
+		} else {
+			printf("%lu kHz)\n", max_stable_freq_khz);
+		}
+		printf("  Best throughput: %lu KB/s\n", best_throughput);
+		printf("=================================================\n");
+		printf("\n");
+
+		// csv
+		printf("\n--- CLOCK_SWEEP_CSV ---\n");
+		printf("prescaler,freq_khz,throughput_kbps,errors\n");
+		for (uint32_t i = 0; i < num_prescalers; i++) {
+			printf("%s,%lu,%lu,%lu\n", prescaler_names[i], stored_freq_khz[i], stored_throughput[i], stored_errors[i]);
+		}
+		printf("--- END_CLOCK_SWEEP_CSV ---\n");
+
+		results->max_stable_clock_khz = best_throughput;
+
+
+
+	}
+
+
+}
+
+
+/*
  * main test drivers
  */
 
@@ -671,6 +828,11 @@ bool link_char_run(uint8_t tests, const link_char_config_t *config, link_char_re
         if (!results->concurrent_pass) {
             all_pass = false;
         }
+    }
+
+    // SPI clock sweep
+    if (tests & CHAR_TEST_SPI_CLOCK_SWEEP) {
+    	link_char_test_spi_clock_sweep(&results->spi);
     }
 
     results->test_duration_ms = HAL_GetTick() - start_tick;

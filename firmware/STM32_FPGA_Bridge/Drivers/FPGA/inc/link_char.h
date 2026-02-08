@@ -28,9 +28,10 @@
 #define CHAR_TEST_SPI_THROUGHPUT	(1 << 2)	// spi sped measurement
 #define CHAR_TEST_SPI_BER			(1 << 3)	// BER
 #define CHAR_TEST_CONCURRENT		(1 << 4)    // I2C + SPI simultaneous
-#define CHAR_STRESS_TEST			(1 << 5)	// Long duration stress test
+#define CHAR_TEST_SPI_CLOCK_SWEEP	(1 << 5)	// max stable spi clock
+#define CHAR_STRESS_TEST			(1 << 6)	// Long duration stress test
 
-#define CHAR_TEST_ALL				(0xFF)		// run all
+#define CHAR_TEST_ALL				(0x7F)		// run all
 #define CHAR_TEST_QUICK				(CHAR_TEST_CONNECTIVITY | CHAR_TEST_I2C_LATENCY | CHAR_TEST_SPI_THROUGHPUT)
 
 /*
@@ -48,6 +49,7 @@ typedef struct {
 	uint32_t total_transactions;
 	uint32_t errors;
 	float    success_rate_pct;
+	uint32_t max_stable_clock_khz;
 } link_char_i2c_t;
 
 /* spi perf measurements */
@@ -112,6 +114,7 @@ void link_char_test_i2c_latency(uint32_t iterations, link_char_i2c_t *results);
 void link_char_test_spi_throughput(uint32_t burst_size, link_char_spi_t *results);
 void link_char_test_spi_ber(uint32_t num_bytes, link_char_spi_t *results);
 bool link_char_test_concurrent(uint32_t duration_sec);
+void link_char_test_spi_clock_sweep(link_char_spi_t *results);
 
 void link_char_print_results(const link_char_results_t *results);
 void link_char_print_csv(const link_char_results_t *results);
