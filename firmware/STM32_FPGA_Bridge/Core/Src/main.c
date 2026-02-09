@@ -386,7 +386,7 @@ static void MX_SPI4_Init(void)
   hspi4.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi4.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi4.Init.NSS = SPI_NSS_SOFT;
-  hspi4.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
+  hspi4.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
   hspi4.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi4.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi4.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -455,7 +455,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = SPI_CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(SPI_CS_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
@@ -465,17 +465,25 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 static void print_system_info(void) {
-	printf("\n");
-	printf("============================================\n");
-	printf("  STM32-FPGA Adaptive Link System\n");
-	printf("============================================\n");
-	printf("  MCU:        STM32H723ZG\n");
-	printf("  FPGA:       Artix-7 (Basys 3)\n");
-	printf("  Test Mode:  %s\n", get_test_mode_string(APP_TEST_MODE));
+    printf("\n");
+    printf("============================================\n");
+    printf("  STM32-FPGA Adaptive Link System\n");
+    printf("============================================\n");
+    printf("  MCU:        STM32H723ZG\n");
+    printf("  FPGA:       Artix-7 (Basys 3)\n");
+    printf("  Test Mode:  %s\n", get_test_mode_string(APP_TEST_MODE));
     printf("--------------------------------------------\n");
+
+    // Add clock info
+    printf("  SYSCLK:     %lu MHz\n", HAL_RCC_GetSysClockFreq() / 1000000);
+    printf("  HCLK:       %lu MHz\n", HAL_RCC_GetHCLKFreq() / 1000000);
+    printf("  APB2:       %lu MHz\n", HAL_RCC_GetPCLK2Freq() / 1000000);
+    printf("  SPI4 Clk:   %lu MHz\n", HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI45) / 1000000);
+    printf("--------------------------------------------\n");
+
     printf("  I2C:        %s\n", ENABLE_I2C_SUBSYSTEM ? "ENABLED" : "DISABLED");
-	printf("  SPI:        %s\n", ENABLE_SPI_SUBSYSTEM ? "ENABLED" : "DISABLED");
-	printf("============================================\n\n");
+    printf("  SPI:        %s\n", ENABLE_SPI_SUBSYSTEM ? "ENABLED" : "DISABLED");
+    printf("============================================\n\n");
 }
 
 static const char* get_test_mode_string(int mode) {
